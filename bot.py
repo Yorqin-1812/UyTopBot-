@@ -67,6 +67,7 @@ def main_keyboard():
 def get_admin_keyboard():
     keyboard = [
         ["📋 Kutilayotgan e'lonlar"],
+        ["📋 Tasdiqlangan e'lonlar"],
         ["📊 Statistika"],
         ["⬅️ Asosiy menyu"],
     ]
