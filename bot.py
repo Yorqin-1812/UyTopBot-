@@ -299,13 +299,6 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-        await update.message.reply_text(
-            "❌ Sizda admin huquqi yo‘q."
-        )
-        return
-
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
 
     cursor.execute("""
         SELECT
