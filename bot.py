@@ -121,7 +121,7 @@ def init_db():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message: return
     await update.message.reply_text(
-       " Assalomu alaykum! 👋\n\n "
+       "Assalomu alaykum! 👋\n\n"
         "🏠 Zarafshon UyTop botiga xush kelibsiz!\n\n"
         "Kerakli bo‘limni tanlang:",
         reply_markup=main_keyboard(),
@@ -352,7 +352,7 @@ async def get_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     await update.message.reply_text(
-        Assalomu alaykum!👋\n\n✅ Chekingiz va e'loningiz qabul qilindi.\n"
+        "Assalomu alaykum!👋\n\n✅ Chekingiz va e'loningiz qabul qilindi.\n"
         "🔎 Admin to‘lovni va e'lonni tekshirmoqda.",
         reply_markup=main_keyboard(),
     )
