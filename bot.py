@@ -285,12 +285,20 @@ async def pending_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     await update.message.reply_text(text)
-    async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-        if not update.message:
-            return
+
+async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message:
+        return
 
     if ADMIN_ID is None or update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text(
+            "❌ Sizda admin huquqi yo‘q."
+        )
+        return
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
         await update.message.reply_text(
             "❌ Sizda admin huquqi yo‘q."
         )
