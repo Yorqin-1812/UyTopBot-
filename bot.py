@@ -121,7 +121,7 @@ def init_db():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message: return
     await update.message.reply_text(
-        Assalomu alaykum! 👋\n\n
+       " Assalomu alaykum! 👋\n\n "
         "🏠 Zarafshon UyTop botiga xush kelibsiz!\n\n"
         "Kerakli bo‘limni tanlang:",
         reply_markup=main_keyboard(),
