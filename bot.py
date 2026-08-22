@@ -141,10 +141,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text(
-        "Assalomu alaykum! 👋\n\n"
-        "🏠 Zarafshon UyTop botiga xush kelibsiz!\n\n"
-        "Kerakli bo‘limni tanlang:",
-        reply_markup=main_keyboard(),
+    "Assalomu alaykum! 👋\n\n"
+    "✅ E'loningiz tasdiqlash uchun yuborildi.\n\n"
+    "⏳ E'lon 24 soat ichida tekshiriladi "
+    "va tasdiqlangach botda ko‘rinadi.\n\n"
+    "📌 E'loningiz tasdiqlanganidan so‘ng sizga xabar beramiz.",
+    reply_markup=main_keyboard(),
     )
 
 
@@ -283,6 +285,96 @@ async def pending_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     await update.message.reply_text(text)
+    async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not update.message:
+        return
+
+    if ADMIN_ID is None or update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text(
+            "❌ Sizda admin huquqi yo‘q."
+        )
+        return
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            ad_type,
+            address,
+            house_type,
+            rooms,
+            area,
+            price,
+            description,
+            phone,
+            photo_ids
+        FROM ads
+        WHERE status='approved'
+        ORDER BY id DESC
+    """)
+
+    ads = cursor.fetchall()
+    conn.close()
+
+    if not ads:
+        await update.message.reply_text(
+            "📋 Hozircha tasdiqlangan e'lonlar yo‘q."
+        )
+        return
+
+    await update.message.reply_text(
+        f"📋 TASDIQLANGAN E'LONLAR\n\n"
+        f"Jami: {len(ads)} ta"
+    )
+
+    for ad in ads:
+
+        (
+            ad_id,
+            ad_type,
+            address,
+            house_type,
+            rooms,
+            area,
+            price,
+            description,
+            phone,
+            photo_ids,
+        ) = ad
+
+        caption = (
+            f"🏠 E'lon #{ad_id}\n\n"
+            f"🏷 Turi: {ad_type}\n"
+            f"📍 Manzil: {address}\n"
+            f"🏠 Uy turi: {house_type}\n"
+            f"🛏 Xonalar: {rooms}\n"
+            f"📐 Maydon: {area}\n"
+            f"💰 Narx: {price}\n"
+            f"📝 {description}\n"
+            f"📞 Telefon: {phone}"
+        )
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "🗑 O‘CHIRISH",
+                    callback_data=f"delete_confirm_{ad_id}"
+                )
+            ]
+        ]
+
+        photos = photo_ids.split(",")
+
+        if photos and photos[0]:
+
+            await update.message.reply_photo(
+                photo=photos[0],
+                caption=caption,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
 
 
 # ==================================================
@@ -799,6 +891,46 @@ async def get_receipt(
 # ADMIN ACTIONS
 # ==================================================
 
+async def delete_ad_confirm(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    if not query:
+        return
+
+    if ADMIN_ID is None or query.from_user.id != ADMIN_ID:
+
+        await query.answer(
+            "❌ Sizda admin huquqi yo‘q.",
+            show_alert=True,
+        )
+
+        return
+
+    await query.answer()
+
+    ad_id = int(query.data.split("_")[-1])
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "✅ HA, O‘CHIRISH",
+                callback_data=f"delete_yes_{ad_id}",
+            ),
+            InlineKeyboardButton(
+                "❌ BEKOR QILISH",
+                callback_data=f"delete_no_{ad_id}",
+            ),
+        ]
+    ]
+
+    await query.edit_message_reply_markup(
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    
 async def admin_action(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
@@ -821,6 +953,70 @@ async def admin_action(
     await query.answer()
 
     data = query.data
+        # ==================================================
+    # E'LONNI O'CHIRISH
+    # ==================================================
+
+    if data.startswith("delete_yes_"):
+
+        ad_id = int(data.split("_")[-1])
+
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT user_id FROM ads WHERE id=?",
+            (ad_id,)
+        )
+
+        result = cursor.fetchone()
+
+        cursor.execute(
+            "DELETE FROM ads WHERE id=?",
+            (ad_id,)
+        )
+
+        conn.commit()
+        conn.close()
+
+        await query.edit_message_caption(
+            caption=f"🗑 E'LON #{ad_id} O‘CHIRILDI."
+        )
+
+        if result:
+
+            try:
+                await context.bot.send_message(
+                    chat_id=result[0],
+                    text=(
+                        f"⚠️ E'loningiz #{ad_id} "
+                        "admin tomonidan o‘chirildi."
+                    ),
+                )
+            except Exception:
+                pass
+
+        return
+
+
+    if data.startswith("delete_no_"):
+
+        ad_id = int(data.split("_")[-1])
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "🗑 O‘CHIRISH",
+                    callback_data=f"delete_confirm_{ad_id}",
+                )
+            ]
+        ]
+
+        await query.edit_message_reply_markup(
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+        return
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -1402,6 +1598,12 @@ def main():
             filters.Regex(r"^📋 Kutilayotgan e'lonlar$"),
             pending_ads,
         )
+    )
+    application.add_handler(
+    MessageHandler(
+        filters.Regex(r"^📋 Tasdiqlangan e'lonlar$"),
+        approved_ads,
+    )
     )
 
     application.add_handler(
