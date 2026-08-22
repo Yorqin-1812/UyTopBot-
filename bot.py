@@ -540,9 +540,7 @@ def main() -> None:
             PRICE_STATE: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_price)],
             DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_description)],
             PHONE: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_phone)],
-            PHOTO: [
-                MessageHandler(filters.Photo | filters.Regex(r"^✅ Tayyor$"), get_photo),
-            ],
+            PHOTO: [MessageHandler(filters.Photo | filters.Regex(r"^✅ Tayyor$"), get_photo),],
      CONFIRM: [CallbackQueryHandler(confirm_ad, pattern="^(submit_ad|cancel_ad)$")],
             RECEIPT: [MessageHandler(filters.Photo, get_receipt)],
         },
