@@ -2,12 +2,14 @@ import logging
 import os
 import sqlite3
 
+# Railway Variables'dan o'qish (Replit Secrets emas)
 from dotenv import load_dotenv
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    constants,
 )
 from telegram.ext import (
     Application,
@@ -21,46 +23,56 @@ from telegram.ext import (
 
 load_dotenv()
 
+# ==================================================
+# CONFIGURATION
+# ==================================================
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
-
 logger = logging.getLogger(__name__)
 
+# --- Railway Environment Variables ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-ADMIN_ID = os.getenv("ADMIN_ID")
-PAYMENT_CARD = os.getenv("PAYMENT_CARD")
+ADMIN_ID_STR = os.getenv("ADMIN_ID")
+PAYMENT_CARD = os.getenv("PAYMENT_CARD", "Karta kiritilmagan") # Agar kiritilmagan bo'lsa, defolt matn
 
-if ADMIN_ID:
-    ADMIN_ID = int(ADMIN_ID)
+# ADMIN_ID ni int turiga o'tkazish
+try:
+    ADMIN_ID = int(ADMIN_ID_STR) if ADMIN_ID_STR else None
+except ValueError:
+    logger.error("ADMIN_ID Variables'da to'g'ri (raqam) kiritilmagan!")
+    ADMIN_ID = None
 
 DB_NAME = "uytop.db"
 PRICE = 1000
 
+# --- Keyboards ---
 MAIN_BUTTONS = [
     ["🏠 Sotuvdagi uylar"],
     ["🔑 Ijara uchun uylar"],
     ["➕ E'lon joylashtirish"],
 ]
 
-
 def main_keyboard():
-    return ReplyKeyboardMarkup(
-        MAIN_BUTTONS,
-        resize_keyboard=True,
-        is_persistent=True,
-    )
+    return ReplyKeyboardMarkup(MAIN_BUTTONS, resize_keyboard=True, is_persistent=True)
+
+# Admin paneli uchun klaviatura
+def get_admin_keyboard():
+    keyboard = [
+        ["📋 Kutilayotgan e'lonlar"],
+        ["📊 Statistika"],
+        ["⬅️ Asosiy menyu"],
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 
 # ==================================================
 # DATABASE
 # ==================================================
-
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ads (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,21 +86,20 @@ def init_db():
             price TEXT,
             description TEXT,
             phone TEXT,
-            photo_ids TEXT,
-            status TEXT DEFAULT 'pending',
-            payment_status TEXT DEFAULT 'pending',
+            photo_ids TEXT, 
+            status TEXT DEFAULT 'pending', -- pending, approved, rejected
+            payment_status TEXT DEFAULT 'pending', -- pending, approved, rejected
             payment_receipt_id TEXT
         )
     """)
-
     conn.commit()
     conn.close()
+    logger.info("Ma'lumotlar bazasi initsializatsiya qilindi.")
 
 
 # ==================================================
 # STATES
 # ==================================================
-
 (
     AD_TYPE,
     ADDRESS,
@@ -105,311 +116,156 @@ def init_db():
 
 
 # ==================================================
-# START
+# START & MY ID
 # ==================================================
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message:
-        return
-
+    if not update.message: return
     await update.message.reply_text(
-        "Assalomu alaykum! 👋\n\n"
+        Assalomu alaykum! 👋\n\n
         "🏠 Zarafshon UyTop botiga xush kelibsiz!\n\n"
         "Kerakli bo‘limni tanlang:",
         reply_markup=main_keyboard(),
     )
 
-
-# ==================================================
-# MY ID
-# ==================================================
-
 async def myid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message:
-        return
-
+    if not update.message: return
     await update.message.reply_text(
-        f"Sizning Telegram ID'ingiz:\n\n{update.effective_user.id}"
+        f"Sizning Telegram ID'ingiz:\n\n<code>{update.effective_user.id}</code>",
+        parse_mode=constants.ParseMode.HTML
     )
-# ==================================================
-# ADMIN PANEL
-# ==================================================
 
-async def admin_panel(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-    if not update.message:
-        return
 
+# ==================================================
+# ADMIN PANEL (To'liq Bog'langan)
+# ==================================================
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message: return
+    
     if ADMIN_ID is None or update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text(
-            "❌ Sizda admin huquqi yo‘q."
-        )
+        await update.message.reply_text("❌ Sizda admin huquqi yo‘q.")
         return
-
-    keyboard = [
-        ["📋 Kutilayotgan e'lonlar"],
-        ["💳 Kutilayotgan to'lovlar"],
-        ["🏠 Tasdiqlangan e'lonlar"],
-        ["❌ Rad etilgan e'lonlar"],
-        ["🗑 E'lonni boshqarish"],
-        ["📊 Statistika"],
-        ["⬅️ Asosiy menyu"],
-    ]
 
     await update.message.reply_text(
         "🔐 ADMIN PANEL\n\n"
         "Kerakli bo‘limni tanlang:",
-        async def pending_ads(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-    if not update.message:
-        return
+        reply_markup=get_admin_keyboard()
+    )
 
-    if ADMIN_ID is None or update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text(
-            "❌ Sizda admin huquqi yo‘q."
-        )
-        return
+async def admin_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message: return
+    if ADMIN_ID is None or update.effective_user.id != ADMIN_ID: return
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            id,
-            ad_type,
-            address,
-            house_type,
-            rooms,
-            area,
-            price,
-            phone
-        FROM ads
-        WHERE status='pending'
-        ORDER BY id DESC
-    """)
-
-    ads = cursor.fetchall()
+    
+    cursor.execute("SELECT COUNT(*) FROM ads WHERE status='approved'")
+    approved_ads = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM ads WHERE status='pending'")
+    pending_ads = cursor.fetchone()[0]
+    
     conn.close()
 
-    if not ads:
-        await update.message.reply_text(
-            "📋 KUTILAYOTGAN E'LONLAR\n\n"
-            "Hozircha kutilayotgan e'lonlar yo‘q."
-        )
-        return
-
-    for ad in ads:
-        (
-            ad_id,
-            ad_type,
-            address,
-            house_type,
-            rooms,
-            area,
-            price,
-            phone,
-        ) = ad
-
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    "👁 Ko‘rish",
-                    callback_data=f"view_pending_{ad_id}",
-                )
-            ]
-        ]
-
-        await update.message.reply_text(
-            f"📋 E'lon #{ad_id}\n\n"
-            f"🏷 Turi: {ad_type}\n"
-            f"📍 Manzil: {address}\n"
-            f"🏠 Uy turi: {house_type}\n"
-            f"🛏 Xonalar: {rooms}\n"
-            f"📐 Maydon: {area}\n"
-            f"💰 Narx: {price}\n"
-            f"📞 Telefon: {phone}",
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard,
-            resize_keyboard=True,
-        ),
+    await update.message.reply_text(
+        "📊 STATISTIKA\n\n"
+        f"✅ Tasdiqlangan e'lonlar: {approved_ads} ta\n"
+        f"📋 Kutilayotgan e'lonlar: {pending_ads} ta"
     )
 
-# ==================================================
-# E'LON BOSHLASH
-# ==================================================
+async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message: return
+    await update.message.reply_text(
+        "Asosiy menyuga qaytdingiz.",
+        reply_markup=main_keyboard()
+    )
 
+
+# ==================================================
+# E'LON JOYLASHTIRISH
+# ==================================================
 async def start_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    if not update.message:
-        return ConversationHandler.END
+    if not update.message: return ConversationHandler.END
 
     context.user_data.clear()
     context.user_data["photos"] = []
 
-    keyboard = [
-        ["🏠 Sotuv"],
-        ["🔑 Ijara"],
-        ["❌ Bekor qilish"],
-    ]
-
+    keyboard = [["🏠 Sotuv", "🔑 Ijara"], ["❌ Bekor qilish"]]
     await update.message.reply_text(
         "➕ E'lon joylashtirish\n\n"
         "E'lon turini tanlang:",
-        reply_markup=ReplyKeyboardMarkup(
-            keyboard,
-            resize_keyboard=True,
-        ),
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True),
     )
-
     return AD_TYPE
 
-
 async def get_ad_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     text = update.message.text
-
     if text == "❌ Bekor qilish":
-        await update.message.reply_text(
-            "❌ E'lon bekor qilindi.",
-            reply_markup=main_keyboard(),
-        )
+        await update.message.reply_text("❌ E'lon bekor qilindi.", reply_markup=main_keyboard())
         return ConversationHandler.END
 
-    if text == "🏠 Sotuv":
-        context.user_data["ad_type"] = "Sotuv"
-
-    elif text == "🔑 Ijara":
-        context.user_data["ad_type"] = "Ijara"
-
+    if text in ["🏠 Sotuv", "🔑 Ijara"]:
+        context.user_data["ad_type"] = text.replace("🏠 ", "").replace("🔑 ", "")
     else:
-        await update.message.reply_text(
-            "Iltimos, tugmalardan birini tanlang."
-        )
+        await update.message.reply_text("Iltimos, tugmalardan birini tanlang.")
         return AD_TYPE
 
     await update.message.reply_text(
-        "📍 Uy manzilini kiriting:\n\n"
-        "Masalan: Zarafshon shahri, 2-mavze"
+        "📍 Uy manzilini kiriting:\n\nMasalan: Zarafshon shahri, 2-mavze"
     )
-
     return ADDRESS
 
-
 async def get_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     context.user_data["address"] = update.message.text
-
-    await update.message.reply_text(
-        "🏠 Uy turini kiriting:\n\n"
-        "Masalan: Hovli uy, kvartira, kottej"
-    )
-
+    await update.message.reply_text("🏠 Uy turini kiriting:\n\nMasalan: Hovli uy, kvartira, kottej")
     return HOUSE_TYPE
 
-
 async def get_house_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     context.user_data["house_type"] = update.message.text
-
-    await update.message.reply_text(
-        "🛏 Xonalar sonini kiriting:\n\n"
-        "Masalan: 4 xona"
-    )
-
+    await update.message.reply_text("🛏 Xonalar sonini kiriting:\n\nMasalan: 4 xona")
     return ROOMS
 
-
 async def get_rooms(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     context.user_data["rooms"] = update.message.text
-
-    await update.message.reply_text(
-        "📐 Uy maydonini kiriting:\n\n"
-        "Masalan: 120 m²"
-    )
-
+    await update.message.reply_text("📐 Uy maydonini kiriting:\n\nMasalan: 120 m²")
     return AREA
 
-
 async def get_area(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     context.user_data["area"] = update.message.text
-
-    await update.message.reply_text(
-        "💰 Uy narxini kiriting:\n\n"
-        "Masalan: 350 000 000 so'm"
-    )
-
+    await update.message.reply_text("💰 Uy narxini kiriting:\n\nMasalan: 350 000 000 so'm")
     return PRICE_STATE
 
-
 async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     context.user_data["price"] = update.message.text
-
-    await update.message.reply_text(
-        "📝 Uy haqida qisqacha ma'lumot yozing."
-    )
-
+    await update.message.reply_text("📝 Uy haqida qisqacha ma'lumot yozing.")
     return DESCRIPTION
 
-
-async def get_description(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
+async def get_description(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["description"] = update.message.text
-
-    await update.message.reply_text(
-        "📞 Telefon raqamingizni kiriting:"
-    )
-
+    await update.message.reply_text("📞 Telefon raqamingizni kiriting:")
     return PHONE
 
-
 async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     context.user_data["phone"] = update.message.text
-
+    # To'g'ri tugma
+    keyboard = [["✅ Tayyor"]]
     await update.message.reply_text(
-        "📸 Endi uy rasmlarini yuboring.\n\n"
-        "10 tagacha rasm yuborishingiz mumkin.\n"
-        "Rasmlarni yuborib bo‘lgach, `Tayyor` deb yozing."
+        "📸 Endi uy rasmlarini yuboring (maksimal 10 ta).\n\n"
+        "Rasmlarni yuborib bo‘lgach, ✅ Tayyor deb yozing.",
+        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     )
-
     return PHOTO
 
-
-# ==================================================
-# RASMLAR
-# ==================================================
-
-async def get_photo(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
+async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photos = context.user_data.setdefault("photos", [])
 
     if update.message.text:
-
-        if update.message.text.lower().strip() == "tayyor":
-
+        # Tuzatilgan shart
+        if update.message.text == "✅ Tayyor":
             if not photos:
-                await update.message.reply_text(
-                    "❗ Kamida 1 ta rasm yuboring."
-                )
+                await update.message.reply_text("❗ Kamida 1 ta rasm yuboring.")
                 return PHOTO
 
             data = context.user_data
-
             summary = (
                 "📋 E'LON MA'LUMOTLARI\n\n"
                 f"🏷 Turi: {data['ad_type']}\n"
@@ -423,194 +279,100 @@ async def get_photo(
                 f"📸 Rasmlar: {len(photos)} ta\n\n"
                 "Ma'lumotlar to‘g‘rimi?"
             )
-
             keyboard = [
-                [
-                    InlineKeyboardButton(
-                        "✅ Ha, davom etish",
-                        callback_data="submit_ad",
-                    )
-                ],
-                [
-                    InlineKeyboardButton(
-                        "❌ Bekor qilish",
-                        callback_data="cancel_ad",
-                    )
-                ],
+                [InlineKeyboardButton("✅ Ha, davom etish", callback_data="submit_ad")],
+                [InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_ad")],
             ]
-
-            await update.message.reply_text(
-                summary,
-                reply_markup=InlineKeyboardMarkup(keyboard),
-            )
-
+            await update.message.reply_text(summary, reply_markup=InlineKeyboardMarkup(keyboard))
             return CONFIRM
-
-        await update.message.reply_text(
-            "📸 Rasm yuboring yoki `Tayyor` deb yozing."
-        )
-
+        
+        # Agar foydalanuvchi "Tayyor" dan boshqa narsa yozsa
+        await update.message.reply_text("📸 Rasm yuboring yoki ✅ Tayyor deb yozing.")
         return PHOTO
 
     if update.message.photo:
-
         if len(photos) >= 10:
-            await update.message.reply_text(
-                "⚠️ Maksimal 10 ta rasm."
-            )
+            await update.message.reply_text("⚠️ Maksimal 10 ta rasm.")
             return PHOTO
-
         photo_id = update.message.photo[-1].file_id
-
         photos.append(photo_id)
-
-        await update.message.reply_text(
-            f"📸 Rasm qabul qilindi: {len(photos)}/10"
-        )
+        await update.message.reply_text(f"📸 Rasm qabul qilindi: {len(photos)}/10")
 
     return PHOTO
 
 
 # ==================================================
-# TO'LOV
+# TO'LOV VA CHEK
 # ==================================================
-
-async def confirm_ad(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def confirm_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-
     await query.answer()
 
     if query.data == "cancel_ad":
         context.user_data.clear()
-
-        await query.edit_message_text(
-            "❌ E'lon joylashtirish bekor qilindi.\n\n"
-            "Asosiy menyuga qaytdingiz."
-        )
-
-        await query.message.reply_text(
-            "Kerakli bo‘limni tanlang:",
-            reply_markup=main_keyboard(),
-        )
-
+        await query.edit_message_text("❌ E'lon joylashtirish bekor qilindi.")
+        await context.bot.send_message(chat_id=query.from_user.id, text="Asosiy menyu:", reply_markup=main_keyboard())
         return ConversationHandler.END
 
     if query.data == "submit_ad":
-
-        card = PAYMENT_CARD or "Karta raqami sozlanmagan"
-
         await query.edit_message_text(
-            "💳 TO'LOV\n\n"
-            "E'lon joylashtirish narxi: 1 000 so'm\n\n"
-            f"💳 Karta:\n{card}\n\n"
-            "To'lovni amalga oshiring.\n"
-            "Keyin to'lov chekini shu yerga 📸 yuboring."
+            "💳 TO'LOV BOSQICHI\n\n"
+            f"E'lon joylashtirish narxi: {PRICE:,} so'm.\n\n"
+            f"Karta raqami:\n<code>{PAYMENT_CARD}</code>\n\n"
+            "To'lovni amalga oshiring va chekni rasm ko'rinishida yuboring.",
+            parse_mode=constants.ParseMode.HTML
         )
-
         return RECEIPT
 
-    return CONFIRM
-
-# ==================================================
-# CHEK
-# ==================================================
-
-async def get_receipt(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
+async def get_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message.photo:
-
-        await update.message.reply_text(
-            "📸 Iltimos, chekni rasm ko‘rinishida yuboring."
-        )
-
+        await update.message.reply_text("📸 Iltimos, chekni rasm ko‘rinishida yuboring.")
         return RECEIPT
 
     receipt_id = update.message.photo[-1].file_id
-
     data = context.user_data
     photos = data.get("photos", [])
-
     user = update.effective_user
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
     cursor.execute("""
         INSERT INTO ads (
-            user_id,
-            username,
-            ad_type,
-            address,
-            house_type,
-            rooms,
-            area,
-            price,
-            description,
-            phone,
-            photo_ids,
-            status,
-            payment_status,
-            payment_receipt_id
+            user_id, username, ad_type, address, house_type, rooms, area, price,
+            description, phone, photo_ids, status, payment_status, payment_receipt_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?)
     """, (
-        user.id,
-        user.username or "",
-        data["ad_type"],
-        data["address"],
-        data["house_type"],
-        data["rooms"],
-        data["area"],
-        data["price"],
-        data["description"],
-        data["phone"],
-        ",".join(photos),
-        "pending",
-        "pending",
-        receipt_id,
+        user.id, user.username or "", data["ad_type"], data["address"],
+        data["house_type"], data["rooms"], data["area"], data["price"],
+        data["description"], data["phone"], ",".join(photos), receipt_id
     ))
-
     ad_id = cursor.lastrowid
-
     conn.commit()
     conn.close()
 
     await update.message.reply_text(
-        "✅ Chekingiz qabul qilindi.\n\n"
-        "🔎 Admin to‘lovni tekshirmoqda.",
+        Assalomu alaykum!👋\n\n✅ Chekingiz va e'loningiz qabul qilindi.\n"
+        "🔎 Admin to‘lovni va e'lonni tekshirmoqda.",
         reply_markup=main_keyboard(),
     )
 
+    # Adminga xabar
     if ADMIN_ID:
-
         admin_text = (
-            f"💳 YANGI TO'LOV #{ad_id}\n\n"
+            f"💳 YANGI TO'LOV VA E'LON #{ad_id}\n\n"
             f"💰 Summa: {PRICE:,} so'm\n"
             f"🏷 E'lon turi: {data['ad_type']}\n"
             f"📍 Manzil: {data['address']}\n\n"
-            f"👤 @{user.username or 'username yo‘q'}\n"
+            f"👤 @{user.username or 'yo‘q'}\n"
             f"🆔 ID: {user.id}"
         )
-
         keyboard = [
             [
-                InlineKeyboardButton(
-                    "✅ TO'LOV TASDIQ",
-                    callback_data=f"payment_approve_{ad_id}",
-                ),
-                InlineKeyboardButton(
-                    "❌ TO'LOV RAD",
-                    callback_data=f"payment_reject_{ad_id}",
-                ),
+                InlineKeyboardButton("✅ TASDIQ", callback_data=f"pay_app_{ad_id}"),
+                InlineKeyboardButton("❌ RAD ETISH", callback_data=f"pay_rej_{ad_id}")
             ]
         ]
-
         await context.bot.send_photo(
             chat_id=ADMIN_ID,
             photo=receipt_id,
@@ -619,583 +381,200 @@ async def get_receipt(
         )
 
     context.user_data.clear()
-
     return ConversationHandler.END
 
 
 # ==================================================
-# ADMIN
+# ADMIN ACTIONS (To'liq Bog'langan)
 # ==================================================
-
-async def admin_action(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
+async def admin_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-
+    
     if ADMIN_ID is None or query.from_user.id != ADMIN_ID:
-        await query.answer(
-            "❌ Sizda admin huquqi yo‘q.",
-            show_alert=True,
-        )
+        await query.answer("❌ Sizda admin huquqi yo‘q.", show_alert=True)
         return
 
     await query.answer()
-
     data = query.data
 
-    # TO'LOV TASDIQLASH
-    if data.startswith("payment_approve_"):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
 
+    # TO'LOV TASDIQLASH (pay_rej_ emas, pay_app_ bo'lishi kerak)
+    if data.startswith("pay_app_"):
         ad_id = int(data.split("_")[-1])
-
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "UPDATE ads SET payment_status='approved' WHERE id=?",
-            (ad_id,),
-        )
-
-        cursor.execute(
-            """
-            SELECT
-                id,
-                user_id,
-                username,
-                ad_type,
-                address,
-                house_type,
-                rooms,
-                area,
-                price,
-                description,
-                phone,
-                photo_ids
-            FROM ads
-            WHERE id=?
-            """,
-            (ad_id,),
-        )
-
+        cursor.execute("UPDATE ads SET payment_status='approved' WHERE id=?", (ad_id,))
+        cursor.execute("SELECT id, ad_type, address, price, photo_ids FROM ads WHERE id=?", (ad_id,))
         ad = cursor.fetchone()
 
-        conn.commit()
-        conn.close()
-
-        if not ad:
-            await query.answer(
-                "❌ E'lon topilmadi!",
-                show_alert=True,
+        if ad:
+            (ad_id, ad_type, address, price, photo_ids) = ad
+            await query.edit_message_caption(caption=f"✅ TO'LOV #{ad_id} TASDIQLANDI.\nE'lonni tekshiring.")
+            
+            photos = photo_ids.split(",")
+            review_text = (
+                f"🧐 E'LONNI TEKSHIRISH #{ad_id}\n\n"
+                f"🏷 Turi: {ad_type}\n"
+                f"📍 Manzil: {address}\n"
+                f"💰 Narx: {price}\n"
+                f"💳 To'lov: ✅ TASDIQLANGAN\n\n"
+                "Ushbu e'lonni tasdiqlaysizmi?"
             )
-            return
-
-        (
-            ad_id,
-            user_id,
-            username,
-            ad_type,
-            address,
-            house_type,
-            rooms,
-            area,
-            price,
-            description,
-            phone,
-            photo_ids,
-        ) = ad
-
-        photos = photo_ids.split(",")
-
-        await query.edit_message_caption(
-            caption=(
-                f"✅ TO'LOV #{ad_id} TASDIQLANDI.\n\n"
-                "🏠 Endi e'lonni tekshiring."
-            )
-        )
-
-        text = (
-            f"🏠 E'LONNI TASDIQLASH #{ad_id}\n\n"
-            f"🏷 Turi: {ad_type}\n"
-            f"📍 Manzil: {address}\n"
-            f"🏠 Uy turi: {house_type}\n"
-            f"🛏 Xonalar: {rooms}\n"
-            f"📐 Maydon: {area}\n"
-            f"💰 Narx: {price}\n"
-            f"📝 Tavsif: {description}\n"
-            f"📞 Telefon: {phone}\n\n"
-            f"💳 To'lov: ✅ TASDIQLANGAN\n"
-            f"📸 Rasmlar: {len(photos)} ta"
-        )
-
-        keyboard = [
-            [
-                InlineKeyboardButton(
-                    "✅ E'LONNI TASDIQLASH",
-                    callback_data=f"approve_{ad_id}",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "❌ E'LONNI RAD ETISH",
-                    callback_data=f"reject_{ad_id}",
-                )
-            ],
-        ]
-
-        await context.bot.send_photo(
-            chat_id=ADMIN_ID,
-            photo=photos[0],
-            caption=text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
-
-        for photo_id in photos[1:]:
-            await context.bot.send_photo(
-                chat_id=ADMIN_ID,
-                photo=photo_id,
-            )
-
-    # TO'LOV RAD
-    elif data.startswith("payment_reject_"):
-
+            keyboard = [[
+                InlineKeyboardButton("✅ E'LONNI TASDIQLASH", callback_data=f"ad_app_{ad_id}"),
+                InlineKeyboardButton("❌ E'LONNI RAD ETISH", callback_data=f"ad_rej_{ad_id}")
+            ]]
+            await context.bot.send_photo(chat_id=ADMIN_ID, photo=photos[0], caption=review_text, reply_markup=InlineKeyboardMarkup(keyboard))
+            
+    # TO'LOV RAD ETISH
+    elif data.startswith("pay_rej_"):
         ad_id = int(data.split("_")[-1])
+        cursor.execute("SELECT user_id FROM ads WHERE id=?", (ad_id,))
+        res = cursor.fetchone()
+        cursor.execute("UPDATE ads SET payment_status='rejected', status='rejected' WHERE id=?", (ad_id,))
+        
+        await query.edit_message_caption(caption=f"❌ TO'LOV #{ad_id} RAD ETILDI.")
+        if res:
+            await context.bot.send_message(chat_id=res[0], text=f"❌ E'lon #{ad_id} uchun to'lov chekingiz rad etildi.")
 
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "SELECT user_id FROM ads WHERE id=?",
-            (ad_id,),
-        )
-
-        result = cursor.fetchone()
-
-        cursor.execute(
-            "UPDATE ads SET payment_status='rejected' WHERE id=?",
-            (ad_id,),
-        )
-
-        conn.commit()
-        conn.close()
-
-        await query.edit_message_caption(
-            caption=f"❌ TO'LOV #{ad_id} RAD ETILDI."
-        )
-
-        if result:
-
+    # E'LONNI YAKUNIY TASDIQLASH (Botga chiqarish)
+    elif data.startswith("ad_app_"):
+        ad_id = int(data.split("_")[-1])
+        cursor.execute("UPDATE ads SET status='approved' WHERE id=?", (ad_id,))
+        cursor.execute("SELECT user_id FROM ads WHERE id=?", (ad_id,))
+        res = cursor.fetchone()
+        
+        await query.edit_message_caption(caption=f"✅ E'LON #{ad_id} TASDIQLANDI. Botga joylandi.")
+        if res:
             await context.bot.send_message(
-                chat_id=result[0],
-                text=(
-                    "❌ To‘lovingiz tasdiqlanmadi.\n\n"
-                    "Iltimos, chekni qayta yuboring."
-                ),
+                chat_id=res[0],
+                text=f"🎉 Tabriklaymiz! E'loningiz #{ad_id} tasdiqlandi va botga joylashtirildi."
             )
 
-    # E'LON TASDIQLASH
-    elif data.startswith("approve_"):
+    # E'LONNI RAD ETISH
+    elif data.startswith("ad_rej_"):
+        ad_id = int(data.split("_")[-1])
+        cursor.execute("SELECT user_id FROM ads WHERE id=?", (ad_id,))
+        res = cursor.fetchone()
+        cursor.execute("UPDATE ads SET status='rejected' WHERE id=?", (ad_id,))
+        
+        await query.edit_message_caption(caption=f"❌ E'LON #{ad_id} RAD ETILDI.")
+        if res:
+            await context.bot.send_message(chat_id=res[0], text=f"❌ E'loningiz #{ad_id} rad etildi.")
 
-        ad_id = int(data.split("_")[1])
-
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "SELECT payment_status, user_id FROM ads WHERE id=?",
-            (ad_id,),
-        )
-
-        result = cursor.fetchone()
-
-        if not result:
-
-            conn.close()
-
-            await query.answer(
-                "E'lon topilmadi.",
-                show_alert=True,
-            )
-
-            return
-
-        payment_status, user_id = result
-
-        if payment_status != "approved":
-
-            conn.close()
-
-            await query.answer(
-                "❌ Avval to‘lov tasdiqlanishi kerak!",
-                show_alert=True,
-            )
-
-            return
-
-        cursor.execute(
-            "UPDATE ads SET status='approved' WHERE id=?",
-            (ad_id,),
-        )
-
-        conn.commit()
-        conn.close()
-
-        await query.edit_message_caption(
-            caption=(
-                f"✅ E'LON #{ad_id} TASDIQLANDI.\n\n"
-                "Endi foydalanuvchilarga ko‘rinadi."
-            )
-        )
-
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=(
-                f"🎉 E'loningiz #{ad_id} tasdiqlandi!\n\n"
-                "🏠 Endi UyTop botida ko‘rinadi."
-                  ),
-        )
-
-    # E'LON RAD
-    elif data.startswith("reject_"):
-
-        ad_id = int(data.split("_")[1])
-
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-
-        cursor.execute(
-            "SELECT user_id FROM ads WHERE id=?",
-            (ad_id,),
-        )
-
-        result = cursor.fetchone()
-
-        cursor.execute(
-            "UPDATE ads SET status='rejected' WHERE id=?",
-            (ad_id,),
-        )
-
-        conn.commit()
-        conn.close()
-
-        await query.edit_message_caption(
-            caption=f"❌ E'LON #{ad_id} RAD ETILDI."
-        )
-
-        if result:
-
-            await context.bot.send_message(
-                chat_id=result[0],
-                text=f"❌ E'loningiz #{ad_id} rad etildi.",
-            )
+    conn.commit()
+    conn.close()
 
 
 # ==================================================
 # E'LONLARNI KO'RSATISH
 # ==================================================
-
-async def show_ads(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
-
-    if not update.message:
-        return
-
+async def show_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message: return
     text = update.message.text
-
+    
     if text == "🏠 Sotuvdagi uylar":
-
-        ad_type = "Sotuv"
-        title = "🏠 SOTUVDAGI UYLAR"
-
+        ad_type = "Sotuv"; title = "🏠 SOTUVDAGI UYLAR"
     elif text == "🔑 Ijara uchun uylar":
-
-        ad_type = "Ijara"
-        title = "🔑 IJARA UCHUN UYLAR"
-
-    else:
-        return
+        ad_type = "Ijara"; title = "🔑 IJARA UCHUN UYLAR"
+    else: return
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-
     cursor.execute("""
-        SELECT
-            id,
-            address,
-            house_type,
-            rooms,
-            area,
-            price,
-            description,
-            phone,
-            photo_ids
-        FROM ads
-        WHERE ad_type=?
-        AND status='approved'
-        ORDER BY id DESC
+        SELECT id, address, house_type, rooms, area, price, description, phone, photo_ids
+        FROM ads WHERE ad_type=? AND status='approved' ORDER BY id DESC
     """, (ad_type,))
-
     ads = cursor.fetchall()
-
     conn.close()
 
     if not ads:
-
-        await update.message.reply_text(
-            f"{title}\n\n"
-            "Hozircha tasdiqlangan e'lonlar mavjud emas.",
-            reply_markup=main_keyboard(),
-        )
-
+        await update.message.reply_text(f"{title}\n\nHozircha tasdiqlangan e'lonlar yo‘q.", reply_markup=main_keyboard())
         return
 
-    await update.message.reply_text(
-        title,
-        reply_markup=main_keyboard(),
-    )
+    await update.message.reply_text(f"{title}\n\nJami: {len(ads)} ta e'lon.", reply_markup=main_keyboard())
 
     for ad in ads:
-
-        (
-            ad_id,
-            address,
-            house_type,
-            rooms,
-            area,
-            price,
-            description,
-            phone,
-            photo_ids,
-        ) = ad
-
+        (ad_id, address, house_type, rooms, area, price, description, phone, photo_ids) = ad
         photos = photo_ids.split(",")
-
         caption = (
-            f"🏠 E'lon #{ad_id}\n\n"
-            f"📍 {address}\n"
-            f"🏠 {house_type}\n"
-            f"🛏 {rooms}\n"
-            f"📐 {area}\n"
-            f"💰 {price}\n\n"
-            f"📝 {description}\n\n"
-            f"📞 {phone}"
+            f"🏠 E'lon #{ad_id}\n\n📍 Manzil: {address}\n"
+            f"🏠 {house_type} | 🛏 {rooms} | 📐 {area}\n💰 Narx: {price}\n\n📝 {description}\n\n📞 Aloqa: {phone}"
         )
-
-        await update.message.reply_photo(
-            photo=photos[0],
-            caption=caption,
-        )
-
-        for photo_id in photos[1:]:
-
-            await update.message.reply_photo(
-                photo=photo_id,
-            )
+        await update.message.reply_photo(photo=photos[0], caption=caption)
 
 
 # ==================================================
-# CANCEL
+# CANCEL & ERROR
 # ==================================================
-
-async def cancel(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
-
-    await update.message.reply_text(
-        "❌ E'lon joylashtirish bekor qilindi.\n\n"
-        "Asosiy menyu:",
-        reply_markup=main_keyboard(),
-    )
-
+    await update.message.reply_text("❌ E'lon joylashtirish bekor qilindi.", reply_markup=main_keyboard())
     return ConversationHandler.END
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    logger.error("Exception handling update:", exc_info=context.error)
+
 
 # ==================================================
-# ERROR HANDLER
+# MAIN
 # ==================================================
-
-async def error_handler(
-    update: object,
-    context: ContextTypes.DEFAULT_TYPE
-):
-    logger.error(
-        "Exception while handling an update:",
-        exc_info=context.error,
-    )
-# ==================================================
-# APPLICATION
-# ==================================================
-
-def build_application() -> Application:
+def main() -> None:
+    init_db()
+    
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN is not set in Replit Secrets.")
+        print("XATO: Variables'da BOT_TOKEN kiritilmagan!")
+        return
 
     application = Application.builder().token(BOT_TOKEN).build()
-    init_db()
 
-    announcement_flow = ConversationHandler(
-        entry_points=[
-            MessageHandler(
-                filters.Regex(r"^➕ E'lon joylashtirish$"),
-                start_ad,
-            )
-        ],
+    # E'lon joylashtirish conversation handler'i
+    ad_conv_handler = ConversationHandler(
+        entry_points=[MessageHandler(filters.Regex(r"^➕ E'lon joylashtirish$"), start_ad)],
         states={
-
-    AD_TYPE: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            get_ad_type,
-        ),
-    ],
-
-    ADDRESS: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            get_address,
-        ),
-    ],
-
-    HOUSE_TYPE: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            get_house_type,
-        ),
-    ],
-
-    ROOMS: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            get_rooms,
-        ),
-    ],
-
-    AREA: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            get_area,
-        ),
-    ],
-
-    PRICE_STATE: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            get_price,
-        ),
-    ],
-
-    DESCRIPTION: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            get_description,
-        ),
-    ],
-
-    PHONE: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            get_phone,
-        ),
-    ],
-
-    PHOTO: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.PHOTO | filters.TEXT,
-            get_photo,
-        ),
-    ],
-
-    CONFIRM: [
-        CallbackQueryHandler(
-            confirm_ad,
-            pattern=r"^(submit_ad|cancel_ad)$",
-        ),
-    ],
-
-    RECEIPT: [
-        MessageHandler(
-            filters.Regex(r"^❌ Bekor qilish$"),
-            cancel,
-        ),
-        MessageHandler(
-            filters.PHOTO,
-            get_receipt,
-        ),
-    ],
-},
-        fallbacks=[
-    CommandHandler("cancel", cancel),
-    MessageHandler(
-        filters.Regex(r"^❌ Bekor qilish$"),
-        cancel,
-    ),
-],
-        allow_reentry=True,
+            AD_TYPE: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_ad_type)],
+            ADDRESS: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_address)],
+            HOUSE_TYPE: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_house_type)],
+            ROOMS: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_rooms)],
+            AREA: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_area)],
+            PRICE_STATE: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_price)],
+            DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_description)],
+            PHONE: [MessageHandler(filters.TEXT & ~filters.Regex(r"^❌Bekor qilish$"), get_phone)],
+            PHOTO: [
+                MessageHandler(filters.Photo | filters.Regex(r"^✅ Tayyor$"), get_photo),
+            ],
+     CONFIRM: [CallbackQueryHandler(confirm_ad, pattern="^(submit_ad|cancel_ad)$")],
+            RECEIPT: [MessageHandler(filters.Photo, get_receipt)],
+        },
+        fallbacks=[CommandHandler("cancel", cancel), MessageHandler(filters.Regex(r"^❌Bekor qilish$"), cancel)],
+        persistent=False
     )
 
+    # Handlerlarni qo'shish
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(
-        CommandHandler("admin", admin_panel)
-    )
     application.add_handler(CommandHandler("myid", myid))
-    application.add_handler(announcement_flow)
-    application.add_handler(CallbackQueryHandler(admin_action))
-    application.add_handler(
-        MessageHandler(
-            filters.Regex(r"^(🏠 Sotuvdagi uylar|🔑 Ijara uchun uylar)$"),
-            show_ads,
-        )
-    )
+    
+    # Admin handlerlari (to'liq bog'langan)
+    application.add_handler(MessageHandler(filters.Text("🔐 Admin Panel"), admin_panel))
+    application.add_handler(MessageHandler(filters.Text("📊 Statistika"), admin_statistics))
+    application.add_handler(MessageHandler(filters.Text("⬅️ Asosiy menyu"), back_to_main))
+    # patternlar to'g'rilandi
+    application.add_handler(CallbackQueryHandler(admin_action, pattern="^(pay_|ad_)"))
+
+    # E'lonlar conversation
+    application.add_handler(ad_conv_handler)
+    
+    # Bekor qilish (konversationdan tashqarida)
+    application.add_handler(MessageHandler(filters.Regex(r"^❌Bekor qilish$"), cancel))
+
+    # E'lonlarni ko'rsatish
+    application.add_handler(MessageHandler(filters.Regex(r"^(🏠 Sotuvdagi uylar|🔑 Ijara uchun uylar)$"), show_ads))
+    
+    # Error handler
     application.add_error_handler(error_handler)
-    return application
-
- 
-def main() -> None:
-    application = build_application()
-    logger.info("Zarafshon UyTop bot started")
+    
+    print("Zarafshon UyTop bot started...")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
-
 
 if __name__ == "__main__":
     main()
