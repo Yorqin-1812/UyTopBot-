@@ -852,7 +852,7 @@ async def admin_action(
             chat_id=user_id,
             text=(
                 f"🎉 E'loningiz #{ad_id} tasdiqlandi!\n\n"
-                "🏠 Endi UyTop botida ko‘rinadi.
+                "🏠 Endi UyTop botida ko‘rinadi."
                   ),
         )
 
