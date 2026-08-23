@@ -831,10 +831,11 @@ async def get_receipt(
     conn.close()
 
     await update.message.reply_text(
-        "Assalomu alaykum! 👋\n\n"
-        "✅ Chekingiz va e'loningiz qabul qilindi.\n"
-        "🔎 Admin to‘lovni va e'lonni tekshirmoqda.",
-        reply_markup=main_keyboard(),
+    "✅ E'loningiz tasdiqlash uchun yuborildi.\n\n"
+    "⏳ Admin to‘lovni va e'lonni tekshiradi.\n"
+    "📌 E'loningiz tasdiqlangandan so‘ng botda ko‘rinadi "
+    "va sizga xabar beramiz.",
+    reply_markup=main_keyboard(),
     )
 
     # Adminga yuborish
