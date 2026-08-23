@@ -1473,7 +1473,6 @@ def main():
             ADDRESS: [
                 MessageHandler(
                     filters.TEXT & ~filters.Regex(r"^❌ Bekor qilish$")
-                    filters.TEXT,
                     get_address,
                 )
             ],
@@ -1481,7 +1480,6 @@ def main():
             HOUSE_TYPE: [
                 MessageHandler(
                     filters.TEXT & ~filters.Regex(r"^❌ Bekor qilish$")
-                    filters.TEXT,
                     get_house_type,
                 )
             ],
@@ -1489,7 +1487,6 @@ def main():
             ROOMS: [
                 MessageHandler(
                     filters.TEXT & ~filters.Regex(r"^❌ Bekor qilish$")
-                    filters.TEXT,
                     get_rooms,
                 )
             ],
@@ -1497,7 +1494,6 @@ def main():
             AREA: [
                 MessageHandler(
                     filters.TEXT & ~filters.Regex(r"^❌ Bekor qilish$")
-                    filters.TEXT,
                     get_area,
                 )
             ],
@@ -1505,7 +1501,6 @@ def main():
             PRICE_STATE: [
                 MessageHandler(
                     filters.TEXT & ~filters.Regex(r"^❌ Bekor qilish$")
-                    filters.TEXT,
                     get_price,
                 )
             ],
@@ -1513,7 +1508,6 @@ def main():
             DESCRIPTION: [
                 MessageHandler(
                     filters.TEXT & ~filters.Regex(r"^❌ Bekor qilish$")
-                    filters.TEXT,
                     get_description,
                 )
             ],
@@ -1521,7 +1515,6 @@ def main():
             PHONE: [
                 MessageHandler(
                     filters.TEXT & ~filters.Regex(r"^❌ Bekor qilish$")
-                    filters.TEXT,
                     get_phone,
                 )
             ],
