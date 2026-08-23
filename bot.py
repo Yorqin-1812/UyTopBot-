@@ -829,7 +829,6 @@ async def confirm_ad(
 # ==================================================
 # RECEIPT
 # ==================================================
-
 async def get_receipt(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
@@ -852,12 +851,13 @@ async def get_receipt(
     data = context.user_data
     photos = data.get("photos", [])
 
-    # E'lon rasmlari borligini tekshirish
+    # E'lon rasmlari yo'q bo'lsa
     if not photos:
 
         await update.message.reply_text(
-            "❌ E'lon rasmlari topilmadi.\n"
-            "Iltimos, e'lonni qaytadan joylashtiring."
+            "❌ E'lon rasmlari topilmadi.\n\n"
+            "Iltimos, e'lonni qaytadan joylashtiring.",
+            reply_markup=main_keyboard(),
         )
 
         context.user_data.clear()
@@ -869,7 +869,8 @@ async def get_receipt(
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO ads (
             user_id,
             username,
@@ -886,21 +887,23 @@ async def get_receipt(
             payment_receipt_id
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        user.id,
-        user.username or "",
-        data["ad_type"],
-        data["address"],
-        data["house_type"],
-        data["rooms"],
-        data["price"],
-        data["description"],
-        data["phone"],
-        ",".join(photos),
-        "pending",
-        "pending",
-        receipt_id,
-    ))
+        """,
+        (
+            user.id,
+            user.username or "",
+            data["ad_type"],
+            data["address"],
+            data["house_type"],
+            data["rooms"],
+            data["price"],
+            data["description"],
+            data["phone"],
+            ",".join(photos),
+            "pending",
+            "pending",
+            receipt_id,
+        ),
+    )
 
     ad_id = cursor.lastrowid
 
@@ -916,10 +919,7 @@ async def get_receipt(
         reply_markup=main_keyboard(),
     )
 
-    # ==================================================
     # ADMINGA YUBORISH
-    # ==================================================
-
     if ADMIN_ID:
 
         admin_text = (
@@ -965,6 +965,7 @@ async def get_receipt(
     context.user_data.clear()
 
     return ConversationHandler.END
+    
 # ==================================================
 # ADMIN ACTIONS
 # ==================================================
