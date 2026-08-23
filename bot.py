@@ -608,25 +608,6 @@ async def get_rooms(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ==================================================
-# AREA
-# ==================================================
-
-async def get_area(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    if not update.message:
-        return AREA
-
-    context.user_data["area"] = update.message.text
-
-    await update.message.reply_text(
-        "💰 Uy narxini kiriting:\n\n"
-        "Masalan: 350 000 000 so'm"
-    )
-
-    return PRICE_STATE
-
-
-# ==================================================
 # PRICE
 # ==================================================
 
