@@ -374,41 +374,45 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         photos = [p for p in photo_ids.split(",") if p]
 
-if len(photos) == 1:
+        if len(photos) == 1:
 
-    await update.message.reply_photo(
-        photo=photos[0],
-        caption=caption,
-    )
-
-else:
-
-    media = []
-
-    for i, photo_id in enumerate(photos):
-
-        if i == 0:
-            media.append(
-                InputMediaPhoto(
-                    media=photo_id,
-                    caption=caption,
-                )
-            )
-        else:
-            media.append(
-                InputMediaPhoto(
-                    media=photo_id
-                )
+            await update.message.reply_photo(
+                photo=photos[0],
+                caption=caption,
+                reply_markup=InlineKeyboardMarkup(keyboard),
             )
 
-    await update.message.reply_media_group(
-        media=media
-    )
+        elif len(photos) > 1:
 
-await update.message.reply_text(
-    f"🆔 E'lon #{ad_id} uchun admin amali:",
-    reply_markup=InlineKeyboardMarkup(keyboard),
-)
+            media = []
+
+            for i, photo_id in enumerate(photos):
+
+                if i == 0:
+
+                    media.append(
+                        InputMediaPhoto(
+                            media=photo_id,
+                            caption=caption,
+                        )
+                    )
+
+                else:
+
+                    media.append(
+                        InputMediaPhoto(
+                            media=photo_id
+                        )
+                    )
+
+            await update.message.reply_media_group(
+                media=media
+            )
+
+            await update.message.reply_text(
+                f"🆔 E'lon #{ad_id} uchun admin amali:",
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
 
 # ==================================================
 # DELETE APPROVED AD
