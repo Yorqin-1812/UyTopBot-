@@ -141,12 +141,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     await update.message.reply_text(
-    "Assalomu alaykum! 👋\n\n"
-    "✅ E'loningiz tasdiqlash uchun yuborildi.\n\n"
-    "⏳ E'lon 24 soat ichida tekshiriladi "
-    "va tasdiqlangach botda ko‘rinadi.\n\n"
-    "📌 E'loningiz tasdiqlanganidan so‘ng sizga xabar beramiz.",
-    reply_markup=main_keyboard(),
+        "Assalomu alaykum! 👋\n\n"
+        "🏠 UyTop botiga xush kelibsiz!\n\n"
+        "Quyidagi menyudan kerakli bo‘limni tanlang.",
+        reply_markup=main_keyboard(),
     )
 
 
