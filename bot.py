@@ -41,7 +41,7 @@ except ValueError:
     ADMIN_ID = None
 
 DB_NAME = "uytop.db"
-PRICE = 1000
+PRICE = 5000
 
 
 # ==================================================
