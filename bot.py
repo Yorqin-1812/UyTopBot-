@@ -84,8 +84,7 @@ def get_admin_keyboard():
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
+    cursor = conn.cursor()   
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ads (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -106,7 +105,7 @@ def init_db():
         )
     """)
 
-        cursor.execute("""
+     cursor.execute("""
         CREATE TABLE IF NOT EXISTS delete_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ad_id INTEGER,
