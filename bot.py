@@ -1061,7 +1061,8 @@ async def admin_action(
     await query.answer()
 
     data = query.data
-        # ==================================================
+
+    # ==================================================
     # E'LONNI O'CHIRISH
     # ==================================================
 
@@ -1087,9 +1088,12 @@ async def admin_action(
         conn.commit()
         conn.close()
 
-        await query.edit_message_caption(
-            caption=f"🗑 E'LON #{ad_id} O‘CHIRILDI."
-        )
+        try:
+            await query.edit_message_caption(
+                caption=f"🗑 E'LON #{ad_id} O‘CHIRILDI."
+            )
+        except Exception:
+            pass
 
         if result:
 
@@ -1106,6 +1110,9 @@ async def admin_action(
 
         return
 
+    # ==================================================
+    # O'CHIRISHNI BEKOR QILISH
+    # ==================================================
 
     if data.startswith("delete_no_"):
 
@@ -1125,6 +1132,10 @@ async def admin_action(
         )
 
         return
+
+    # ==================================================
+    # DATABASE
+    # ==================================================
 
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -1171,7 +1182,7 @@ async def admin_action(
             conn.close()
 
             await query.answer(
-                "E'lon topilmadi.",
+                "❌ E'lon topilmadi.",
                 show_alert=True,
             )
 
@@ -1189,14 +1200,12 @@ async def admin_action(
         ) = ad
 
         try:
-
             await query.edit_message_caption(
                 caption=(
                     f"✅ TO'LOV #{ad_id} TASDIQLANDI.\n\n"
                     "Endi e'lonni tekshiring."
                 )
             )
-
         except Exception:
             pass
 
@@ -1230,45 +1239,53 @@ async def admin_action(
 
         photos = [p for p in photo_ids.split(",") if p]
 
-if len(photos) == 1:
+        # Bitta rasm
+        if len(photos) == 1:
 
-    await context.bot.send_photo(
-        chat_id=ADMIN_ID,
-        photo=photos[0],
-        caption=review_text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
-
-else:
-
-    media = []
-
-    for i, photo_id in enumerate(photos):
-
-        if i == 0:
-            media.append(
-                InputMediaPhoto(
-                    media=photo_id,
-                    caption=review_text,
-                )
-            )
-        else:
-            media.append(
-                InputMediaPhoto(
-                    media=photo_id
-                )
+            await context.bot.send_photo(
+                chat_id=ADMIN_ID,
+                photo=photos[0],
+                caption=review_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
             )
 
-    await context.bot.send_media_group(
-        chat_id=ADMIN_ID,
-        media=media,
-    )
+        # Bir nechta rasm
+        elif len(photos) > 1:
 
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f"🧐 E'lon #{ad_id} uchun amalni tanlang:",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-    )
+            media = []
+
+            for i, photo_id in enumerate(photos):
+
+                if i == 0:
+
+                    media.append(
+                        InputMediaPhoto(
+                            media=photo_id,
+                            caption=review_text,
+                        )
+                    )
+
+                else:
+
+                    media.append(
+                        InputMediaPhoto(
+                            media=photo_id
+                        )
+                    )
+
+            await context.bot.send_media_group(
+                chat_id=ADMIN_ID,
+                media=media,
+            )
+
+            await context.bot.send_message(
+                chat_id=ADMIN_ID,
+                text=(
+                    f"🧐 E'lon #{ad_id} uchun "
+                    "amalni tanlang:"
+                ),
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
 
     # ==================================================
     # PAYMENT REJECTED
@@ -1297,11 +1314,9 @@ else:
         )
 
         try:
-
             await query.edit_message_caption(
                 caption=f"❌ TO'LOV #{ad_id} RAD ETILDI."
             )
-
         except Exception:
             pass
 
@@ -1344,14 +1359,12 @@ else:
         res = cursor.fetchone()
 
         try:
-
             await query.edit_message_caption(
                 caption=(
                     f"✅ E'LON #{ad_id} TASDIQLANDI.\n\n"
                     "Botga joylandi."
                 )
             )
-
         except Exception:
             pass
 
@@ -1395,11 +1408,9 @@ else:
         )
 
         try:
-
             await query.edit_message_caption(
                 caption=f"❌ E'LON #{ad_id} RAD ETILDI."
             )
-
         except Exception:
             pass
 
@@ -1411,6 +1422,10 @@ else:
                     f"❌ E'loningiz #{ad_id} rad etildi."
                 ),
             )
+
+    # ==================================================
+    # SAVE
+    # ==================================================
 
     conn.commit()
     conn.close()
