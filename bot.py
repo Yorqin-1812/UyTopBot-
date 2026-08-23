@@ -383,7 +383,118 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup(keyboard),
             )
 
+# ==================================================
+# DELETE APPROVED AD
+# ==================================================
 
+async def delete_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    query = update.callback_query
+
+    if not query:
+        return
+
+    await query.answer()
+
+    if ADMIN_ID is None or query.from_user.id != ADMIN_ID:
+        await query.answer(
+            "❌ Sizda admin huquqi yo‘q.",
+            show_alert=True,
+        )
+        return
+
+    try:
+        ad_id = int(query.data.replace("delete_confirm_", ""))
+    except ValueError:
+        await query.answer(
+            "❌ E'lon ID noto‘g‘ri.",
+            show_alert=True,
+        )
+        return
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "✅ Ha, o‘chirish",
+                callback_data=f"delete_ad_{ad_id}",
+            ),
+            InlineKeyboardButton(
+                "❌ Bekor qilish",
+                callback_data=f"delete_cancel_{ad_id}",
+            ),
+        ]
+    ]
+
+    await query.edit_message_reply_markup(
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    async def delete_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+
+    if not query:
+        return
+
+    await query.answer()
+
+    if ADMIN_ID is None or query.from_user.id != ADMIN_ID:
+        await query.answer(
+            "❌ Sizda admin huquqi yo‘q.",
+            show_alert=True,
+        )
+        return
+
+    try:
+        ad_id = int(query.data.replace("delete_ad_", ""))
+    except ValueError:
+        await query.answer(
+            "❌ E'lon ID noto‘g‘ri.",
+            show_alert=True,
+        )
+        return
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "DELETE FROM ads WHERE id = ?",
+        (ad_id,)
+    )
+
+    deleted = cursor.rowcount
+
+    conn.commit()
+    conn.close()
+
+    if deleted:
+        await query.edit_message_caption(
+            caption="🗑 E'lon muvaffaqiyatli o‘chirildi."
+        )
+    else:
+        await query.edit_message_caption(
+            caption="❌ Bu e'lon topilmadi yoki allaqachon o‘chirilgan."
+        )
+
+
+async def delete_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+
+    if not query:
+        return
+
+    await query.answer()
+
+    await query.edit_message_reply_markup(
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "🗑 O‘CHIRISH",
+                    callback_data=query.data.replace(
+                        "delete_cancel_", "delete_confirm_"
+                    ),
+                )
+            ]
+        ])
+    )
 # ==================================================
 # BACK TO MAIN
 # ==================================================
@@ -1589,6 +1700,24 @@ def main():
     application.add_handler(
         ad_conv_handler
     )
+    application.add_handler(
+    CallbackQueryHandler(
+        delete_confirm,
+        pattern=r"^delete_confirm_\d+$")
+    )
+    application.add_handler(
+    CallbackQueryHandler(
+        delete_ad,
+        pattern=r"^delete_ad_\d+$"
+    )
+)
+
+application.add_handler(
+    CallbackQueryHandler(
+        delete_cancel,
+        pattern=r"^delete_cancel_\d+$"
+    )
+)
 
     # ==================================================
     # ADMIN BUTTONS
