@@ -386,14 +386,13 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================================================
 # DELETE APPROVED AD
 # ==================================================
+
 async def delete_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
 
     if not query:
         return
-
-    await query.answer()
 
     if ADMIN_ID is None or query.from_user.id != ADMIN_ID:
         await query.answer(
@@ -402,9 +401,11 @@ async def delete_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    await query.answer()
+
     try:
         ad_id = int(
-            query.data.replace("delete_ad_", "")
+            query.data.replace("delete_yes_", "")
         )
     except ValueError:
         await query.answer(
@@ -436,10 +437,11 @@ async def delete_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
-async def delete_cancel(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+# ==================================================
+# CANCEL DELETE
+# ==================================================
+
+async def delete_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     query = update.callback_query
 
@@ -449,7 +451,7 @@ async def delete_cancel(
     await query.answer()
 
     ad_id = query.data.replace(
-        "delete_cancel_",
+        "delete_no_",
         ""
     )
 
@@ -463,6 +465,11 @@ async def delete_cancel(
             ]
         ])
     )
+
+
+# ==================================================
+# BACK TO MAIN
+# ==================================================
 # ==================================================
 # BACK TO MAIN
 # ==================================================
@@ -1683,14 +1690,14 @@ def main():
     application.add_handler(
         CallbackQueryHandler(
             delete_ad,
-            pattern=r"^delete_ad_\d+$"
+            pattern=r"^delete_yes_\d+$"
         )
     )
 
     application.add_handler(
         CallbackQueryHandler(
             delete_cancel,
-            pattern=r"^delete_cancel_\d+$"
+            pattern=r"^delete_no_\d+$"
         )
     )
 
