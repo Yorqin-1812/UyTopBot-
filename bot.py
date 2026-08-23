@@ -8,6 +8,7 @@ from telegram import (
     ReplyKeyboardRemove,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    InputMediaPhoto,
     constants,
 )
 from telegram.ext import (
