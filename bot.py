@@ -1668,24 +1668,31 @@ def main():
     application.add_handler(
         ad_conv_handler
     )
-    application.add_handler(
-    CallbackQueryHandler(
-        delete_confirm,
-        pattern=r"^delete_confirm_\d+$")
-    )
-    application.add_handler(
-    CallbackQueryHandler(
-        delete_ad,
-        pattern=r"^delete_ad_\d+$"
-    )
-)
 
-application.add_handler(
-    CallbackQueryHandler(
-        delete_cancel,
-        pattern=r"^delete_cancel_\d+$"
+    # ==================================================
+    # DELETE AD CALLBACKS
+    # ==================================================
+
+    application.add_handler(
+        CallbackQueryHandler(
+            delete_confirm,
+            pattern=r"^delete_confirm_\d+$"
+        )
     )
-)
+
+    application.add_handler(
+        CallbackQueryHandler(
+            delete_ad,
+            pattern=r"^delete_ad_\d+$"
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            delete_cancel,
+            pattern=r"^delete_cancel_\d+$"
+        )
+    )
 
     # ==================================================
     # ADMIN BUTTONS
@@ -1704,11 +1711,12 @@ application.add_handler(
             pending_ads,
         )
     )
+
     application.add_handler(
-    MessageHandler(
-        filters.Regex(r"^📋 Tasdiqlangan e'lonlar$"),
-        approved_ads,
-    )
+        MessageHandler(
+            filters.Regex(r"^📋 Tasdiqlangan e'lonlar$"),
+            approved_ads,
+        )
     )
 
     application.add_handler(
@@ -1732,7 +1740,7 @@ application.add_handler(
     application.add_handler(
         CallbackQueryHandler(
             admin_action,
-            pattern=r"^(pay_app_|pay_rej_|ad_app_|ad_rej_)",
+            pattern=r"^(pay_app_|pay_rej_|ad_app_|ad_rej_)"
         )
     )
 
