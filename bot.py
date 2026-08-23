@@ -1675,7 +1675,7 @@ def main():
 
     application.add_handler(
         CallbackQueryHandler(
-            delete_confirm,
+            delete_ad_confirm,
             pattern=r"^delete_confirm_\d+$"
         )
     )
