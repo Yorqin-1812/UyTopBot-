@@ -603,11 +603,11 @@ async def get_rooms(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["rooms"] = update.message.text
 
     await update.message.reply_text(
-        "📐 Uy maydonini kiriting:\n\n"
-        "Masalan: 120 m²"
+        "💰 Uy narxini kiriting:\n\n"
+        "Masalan: 350 000 000 so'm"
     )
 
-    return AREA
+    return PRICE_STATE
 
 
 # ==================================================
@@ -738,7 +738,6 @@ async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📍 Manzil: {data['address']}\n"
             f"🏠 Uy turi: {data['house_type']}\n"
             f"🛏 Xonalar: {data['rooms']}\n"
-            f"📐 Maydon: {data['area']}\n"
             f"💰 Narx: {data['price']}\n"
             f"📝 Tavsif: {data['description']}\n"
             f"📞 Telefon: {data['phone']}\n"
@@ -1581,13 +1580,6 @@ def main():
                 MessageHandler(
                     filters.TEXT & ~filters.Regex(r"^❌ Bekor qilish$"),
                     get_rooms,
-                )
-            ],
-
-            AREA: [
-                MessageHandler(
-                    filters.TEXT & ~filters.Regex(r"^❌ Bekor qilish$"),
-                    get_area,
                 )
             ],
 
