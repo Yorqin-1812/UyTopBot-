@@ -313,7 +313,6 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
             address,
             house_type,
             rooms,
-            area,
             price,
             description,
             phone,
@@ -345,7 +344,6 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
             address,
             house_type,
             rooms,
-            area,
             price,
             description,
             phone,
@@ -358,7 +356,6 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📍 Manzil: {address}\n"
             f"🏠 Uy turi: {house_type}\n"
             f"🛏 Xonalar: {rooms}\n"
-            f"📐 Maydon: {area}\n"
             f"💰 Narx: {price}\n"
             f"📝 {description}\n"
             f"📞 Telefon: {phone}"
@@ -891,7 +888,6 @@ async def get_receipt(
             address,
             house_type,
             rooms,
-            area,
             price,
             description,
             phone,
@@ -908,7 +904,6 @@ async def get_receipt(
         data["address"],
         data["house_type"],
         data["rooms"],
-        data["area"],
         data["price"],
         data["description"],
         data["phone"],
@@ -941,7 +936,6 @@ async def get_receipt(
             f"📍 Manzil: {data['address']}\n"
             f"🏠 Uy turi: {data['house_type']}\n"
             f"🛏 Xonalar: {data['rooms']}\n"
-            f"📐 Maydon: {data['area']}\n"
             f"💰 Narx: {data['price']}\n\n"
             f"👤 @{user.username or 'yo‘q'}\n"
             f"🆔 ID: {user.id}"
@@ -1138,7 +1132,6 @@ async def admin_action(
                 address,
                 house_type,
                 rooms,
-                area,
                 price,
                 description,
                 phone,
@@ -1168,7 +1161,6 @@ async def admin_action(
             address,
             house_type,
             rooms,
-            area,
             price,
             description,
             phone,
@@ -1193,7 +1185,6 @@ async def admin_action(
             f"📍 Manzil: {address}\n"
             f"🏠 Uy turi: {house_type}\n"
             f"🛏 Xonalar: {rooms}\n"
-            f"📐 Maydon: {area}\n"
             f"💰 Narx: {price}\n"
             f"📝 Tavsif: {description}\n"
             f"📞 Telefon: {phone}\n\n"
@@ -1410,7 +1401,6 @@ async def show_ads(
             address,
             house_type,
             rooms,
-            area,
             price,
             description,
             phone,
@@ -1450,7 +1440,6 @@ async def show_ads(
             address,
             house_type,
             rooms,
-            area,
             price,
             description,
             phone,
@@ -1464,7 +1453,6 @@ async def show_ads(
             f"📍 Manzil: {address}\n"
             f"🏠 {house_type}\n"
             f"🛏 {rooms}\n"
-            f"📐 {area}\n"
             f"💰 Narx: {price}\n\n"
             f"📝 {description}\n\n"
             f"📞 Aloqa: {phone}"
