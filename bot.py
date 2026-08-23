@@ -387,48 +387,7 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # DELETE APPROVED AD
 # ==================================================
 
-async def delete_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    query = update.callback_query
-
-    if not query:
-        return
-
-    await query.answer()
-
-    if ADMIN_ID is None or query.from_user.id != ADMIN_ID:
-        await query.answer(
-            "❌ Sizda admin huquqi yo‘q.",
-            show_alert=True,
-        )
-        return
-
-    try:
-        ad_id = int(query.data.replace("delete_confirm_", ""))
-    except ValueError:
-        await query.answer(
-            "❌ E'lon ID noto‘g‘ri.",
-            show_alert=True,
-        )
-        return
-
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "✅ Ha, o‘chirish",
-                callback_data=f"delete_ad_{ad_id}",
-            ),
-            InlineKeyboardButton(
-                "❌ Bekor qilish",
-                callback_data=f"delete_cancel_{ad_id}",
-            ),
-        ]
-    ]
-
-    await query.edit_message_reply_markup(
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-    async def delete_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def delete_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
 
     if not query:
@@ -483,14 +442,14 @@ async def delete_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.answer()
 
+    ad_id = query.data.replace("delete_cancel_", "")
+
     await query.edit_message_reply_markup(
         reply_markup=InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(
                     "🗑 O‘CHIRISH",
-                    callback_data=query.data.replace(
-                        "delete_cancel_", "delete_confirm_"
-                    ),
+                    callback_data=f"delete_confirm_{ad_id}",
                 )
             ]
         ])
