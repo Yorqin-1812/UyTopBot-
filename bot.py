@@ -386,8 +386,8 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================================================
 # DELETE APPROVED AD
 # ==================================================
-
 async def delete_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     query = update.callback_query
 
     if not query:
@@ -398,16 +398,18 @@ async def delete_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if ADMIN_ID is None or query.from_user.id != ADMIN_ID:
         await query.answer(
             "❌ Sizda admin huquqi yo‘q.",
-            show_alert=True,
+            show_alert=True
         )
         return
 
     try:
-        ad_id = int(query.data.replace("delete_ad_", ""))
+        ad_id = int(
+            query.data.replace("delete_ad_", "")
+        )
     except ValueError:
         await query.answer(
             "❌ E'lon ID noto‘g‘ri.",
-            show_alert=True,
+            show_alert=True
         )
         return
 
@@ -430,11 +432,15 @@ async def delete_ad(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     else:
         await query.edit_message_caption(
-            caption="❌ Bu e'lon topilmadi yoki allaqachon o‘chirilgan."
+            caption="❌ E'lon topilmadi."
         )
 
 
-async def delete_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def delete_cancel(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
     query = update.callback_query
 
     if not query:
@@ -442,14 +448,17 @@ async def delete_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await query.answer()
 
-    ad_id = query.data.replace("delete_cancel_", "")
+    ad_id = query.data.replace(
+        "delete_cancel_",
+        ""
+    )
 
     await query.edit_message_reply_markup(
         reply_markup=InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(
                     "🗑 O‘CHIRISH",
-                    callback_data=f"delete_confirm_{ad_id}",
+                    callback_data=f"delete_confirm_{ad_id}"
                 )
             ]
         ])
