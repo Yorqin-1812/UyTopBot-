@@ -372,15 +372,43 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
         ]
 
-        photos = photo_ids.split(",")
+        photos = [p for p in photo_ids.split(",") if p]
 
-        if photos and photos[0]:
+if len(photos) == 1:
 
-            await update.message.reply_photo(
-                photo=photos[0],
-                caption=caption,
-                reply_markup=InlineKeyboardMarkup(keyboard),
+    await update.message.reply_photo(
+        photo=photos[0],
+        caption=caption,
+    )
+
+else:
+
+    media = []
+
+    for i, photo_id in enumerate(photos):
+
+        if i == 0:
+            media.append(
+                InputMediaPhoto(
+                    media=photo_id,
+                    caption=caption,
+                )
             )
+        else:
+            media.append(
+                InputMediaPhoto(
+                    media=photo_id
+                )
+            )
+
+    await update.message.reply_media_group(
+        media=media
+    )
+
+await update.message.reply_text(
+    f"🆔 E'lon #{ad_id} uchun admin amali:",
+    reply_markup=InlineKeyboardMarkup(keyboard),
+)
 
 # ==================================================
 # DELETE APPROVED AD
@@ -1200,16 +1228,47 @@ async def admin_action(
             ],
         ]
 
-        photos = photo_ids.split(",")
+        photos = [p for p in photo_ids.split(",") if p]
 
-        if photos and photos[0]:
+if len(photos) == 1:
 
-            await context.bot.send_photo(
-                chat_id=ADMIN_ID,
-                photo=photos[0],
-                caption=review_text,
-                reply_markup=InlineKeyboardMarkup(keyboard),
+    await context.bot.send_photo(
+        chat_id=ADMIN_ID,
+        photo=photos[0],
+        caption=review_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+
+else:
+
+    media = []
+
+    for i, photo_id in enumerate(photos):
+
+        if i == 0:
+            media.append(
+                InputMediaPhoto(
+                    media=photo_id,
+                    caption=review_text,
+                )
             )
+        else:
+            media.append(
+                InputMediaPhoto(
+                    media=photo_id
+                )
+            )
+
+    await context.bot.send_media_group(
+        chat_id=ADMIN_ID,
+        media=media,
+    )
+
+    await context.bot.send_message(
+        chat_id=ADMIN_ID,
+        text=f"🧐 E'lon #{ad_id} uchun amalni tanlang:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
 
     # ==================================================
     # PAYMENT REJECTED
@@ -1451,12 +1510,36 @@ async def show_ads(
             f"📞 Aloqa: {phone}"
         )
 
-        if photos and photos[0]:
+        if len(photos) == 1:
 
-            await update.message.reply_photo(
-                photo=photos[0],
-                caption=caption,
+    await update.message.reply_photo(
+        photo=photos[0],
+        caption=caption,
+    )
+
+else:
+
+    media = []
+
+    for i, photo_id in enumerate(photos):
+
+        if i == 0:
+            media.append(
+                InputMediaPhoto(
+                    media=photo_id,
+                    caption=caption,
+                )
             )
+        else:
+            media.append(
+                InputMediaPhoto(
+                    media=photo_id
+                )
+            )
+
+    await update.message.reply_media_group(
+        media=media
+    )
 
 
 # ==================================================
