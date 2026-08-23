@@ -5,6 +5,7 @@ import sqlite3
 from telegram import (
     Update,
     ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     constants,
@@ -769,7 +770,6 @@ async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     return PHOTO
 
-
 # ==================================================
 # CONFIRM AD
 # ==================================================
@@ -786,6 +786,7 @@ async def confirm_ad(
 
     await query.answer()
 
+    # BEKOR QILISH
     if query.data == "cancel_ad":
 
         context.user_data.clear()
@@ -802,31 +803,29 @@ async def confirm_ad(
 
         return ConversationHandler.END
 
+    # DAVOM ETISH
     if query.data == "submit_ad":
 
-    await query.edit_message_text(
-        "💳 TO'LOV BOSQICHI\n\n"
-        f"E'lon joylashtirish narxi: "
-        f"{PRICE:,} so'm.\n\n"
-        f"Karta raqami:\n"
-        f"<code>{PAYMENT_CARD}</code>\n\n"
-        "To'lovni amalga oshiring va "
-        "chekni rasm ko'rinishida yuboring.",
-        parse_mode=constants.ParseMode.HTML,
-    )
+        await query.edit_message_text(
+            "💳 TO'LOV BOSQICHI\n\n"
+            f"E'lon joylashtirish narxi: {PRICE:,} so'm.\n\n"
+            f"Karta raqami:\n"
+            f"<code>{PAYMENT_CARD}</code>\n\n"
+            "To'lovni amalga oshiring va "
+            "chekni rasm ko'rinishida yuboring.",
+            parse_mode=constants.ParseMode.HTML,
+        )
 
-    # Eski ✅ Tayyor / ❌ Bekor qilish klaviaturasini olib tashlash
-    await context.bot.send_message(
-        chat_id=query.from_user.id,
-        text="📸 To‘lov chekini rasm ko‘rinishida yuboring.",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+        # Eski klaviaturani olib tashlash
+        await context.bot.send_message(
+            chat_id=query.from_user.id,
+            text="📸 To‘lov chekini rasm ko‘rinishida yuboring.",
+            reply_markup=ReplyKeyboardRemove(),
+        )
 
-    return RECEIPT
+        return RECEIPT
 
     return CONFIRM
-
-
 # ==================================================
 # RECEIPT
 # ==================================================
@@ -839,6 +838,7 @@ async def get_receipt(
     if not update.message:
         return RECEIPT
 
+    # Chek rasm ekanligini tekshirish
     if not update.message.photo:
 
         await update.message.reply_text(
@@ -852,10 +852,11 @@ async def get_receipt(
     data = context.user_data
     photos = data.get("photos", [])
 
+    # E'lon rasmlari borligini tekshirish
     if not photos:
 
         await update.message.reply_text(
-            "❌ E'lon rasmlari topilmadi. "
+            "❌ E'lon rasmlari topilmadi.\n"
             "Iltimos, e'lonni qaytadan joylashtiring."
         )
 
@@ -884,7 +885,7 @@ async def get_receipt(
             payment_status,
             payment_receipt_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         user.id,
         user.username or "",
@@ -906,15 +907,19 @@ async def get_receipt(
     conn.commit()
     conn.close()
 
+    # Foydalanuvchiga xabar
     await update.message.reply_text(
-    "✅ E'loningiz tasdiqlash uchun yuborildi.\n\n"
-    "⏳ Admin to‘lovni va e'lonni tekshiradi.\n"
-    "📌 E'loningiz tasdiqlangandan so‘ng botda ko‘rinadi "
-    "va sizga xabar beramiz.",
-    reply_markup=main_keyboard(),
+        "✅ E'loningiz tasdiqlash uchun yuborildi.\n\n"
+        "⏳ Admin to‘lovni va e'lonni tekshiradi.\n"
+        "📌 E'lon tasdiqlangandan so‘ng botda ko‘rinadi "
+        "va sizga xabar beramiz.",
+        reply_markup=main_keyboard(),
     )
 
-    # Adminga yuborish
+    # ==================================================
+    # ADMINGA YUBORISH
+    # ==================================================
+
     if ADMIN_ID:
 
         admin_text = (
@@ -960,8 +965,6 @@ async def get_receipt(
     context.user_data.clear()
 
     return ConversationHandler.END
-
-
 # ==================================================
 # ADMIN ACTIONS
 # ==================================================
