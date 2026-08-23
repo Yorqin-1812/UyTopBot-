@@ -1513,7 +1513,7 @@ async def show_ads(
             photo_ids,
         ) = ad
 
-        photos = photo_ids.split(",")
+        photos = [p for p in photo_ids.split(",") if p]
 
         caption = (
             f"🏠 E'lon #{ad_id}\n\n"
@@ -1525,38 +1525,47 @@ async def show_ads(
             f"📞 Aloqa: {phone}"
         )
 
+        # ==================================================
+        # BITTA RASM
+        # ==================================================
+
         if len(photos) == 1:
 
-    await update.message.reply_photo(
-        photo=photos[0],
-        caption=caption,
-    )
-
-else:
-
-    media = []
-
-    for i, photo_id in enumerate(photos):
-
-        if i == 0:
-            media.append(
-                InputMediaPhoto(
-                    media=photo_id,
-                    caption=caption,
-                )
-            )
-        else:
-            media.append(
-                InputMediaPhoto(
-                    media=photo_id
-                )
+            await update.message.reply_photo(
+                photo=photos[0],
+                caption=caption,
             )
 
-    await update.message.reply_media_group(
-        media=media
-    )
+        # ==================================================
+        # BIR NECHTA RASM
+        # ==================================================
 
+        elif len(photos) > 1:
 
+            media = []
+
+            for i, photo_id in enumerate(photos):
+
+                if i == 0:
+
+                    media.append(
+                        InputMediaPhoto(
+                            media=photo_id,
+                            caption=caption,
+                        )
+                    )
+
+                else:
+
+                    media.append(
+                        InputMediaPhoto(
+                            media=photo_id
+                        )
+                    )
+
+            await update.message.reply_media_group(
+                media=media
+        )
 # ==================================================
 # CANCEL
 # ==================================================
