@@ -804,18 +804,25 @@ async def confirm_ad(
 
     if query.data == "submit_ad":
 
-        await query.edit_message_text(
-            "💳 TO'LOV BOSQICHI\n\n"
-            f"E'lon joylashtirish narxi: "
-            f"{PRICE:,} so'm.\n\n"
-            f"Karta raqami:\n"
-            f"<code>{PAYMENT_CARD}</code>\n\n"
-            "To'lovni amalga oshiring va "
-            "chekni rasm ko'rinishida yuboring.",
-            parse_mode=constants.ParseMode.HTML,
-        )
+    await query.edit_message_text(
+        "💳 TO'LOV BOSQICHI\n\n"
+        f"E'lon joylashtirish narxi: "
+        f"{PRICE:,} so'm.\n\n"
+        f"Karta raqami:\n"
+        f"<code>{PAYMENT_CARD}</code>\n\n"
+        "To'lovni amalga oshiring va "
+        "chekni rasm ko'rinishida yuboring.",
+        parse_mode=constants.ParseMode.HTML,
+    )
 
-        return RECEIPT
+    # Eski ✅ Tayyor / ❌ Bekor qilish klaviaturasini olib tashlash
+    await context.bot.send_message(
+        chat_id=query.from_user.id,
+        text="📸 To‘lov chekini rasm ko‘rinishida yuboring.",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+    return RECEIPT
 
     return CONFIRM
 
