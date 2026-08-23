@@ -106,7 +106,7 @@ def init_db():
     """)
 
     cursor.execute("""
-         CREATE TABLE IF NOT EXISTS delete_requests (
+        CREATE TABLE IF NOT EXISTS delete_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ad_id INTEGER,
             user_id INTEGER,
