@@ -617,16 +617,57 @@ async def get_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # HOUSE TYPE
 # ==================================================
 
-async def get_house_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def get_house_type(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     if not update.message:
         return HOUSE_TYPE
 
-    context.user_data["house_type"] = update.message.text
+    text = update.message.text
+
+    if text == "❌ Bekor qilish":
+
+        context.user_data.clear()
+
+        await update.message.reply_text(
+            "❌ E'lon bekor qilindi.",
+            reply_markup=main_keyboard(),
+        )
+
+        return ConversationHandler.END
+
+    if text == "🏢 Kvartira":
+        context.user_data["house_type"] = "Kvartira"
+
+    elif text == "🏡 Hovli":
+        context.user_data["house_type"] = "Hovli"
+
+    elif text == "🏘 Kottej":
+        context.user_data["house_type"] = "Kottej"
+
+    else:
+
+        await update.message.reply_text(
+            "❗ Iltimos, tugmalardan birini tanlang."
+        )
+
+        return HOUSE_TYPE
+
+    keyboard = [
+        ["1", "2", "3"],
+        ["4", "5"],
+        ["❌ Bekor qilish"],
+    ]
 
     await update.message.reply_text(
-        "🛏 Xonalar sonini kiriting:\n\n"
-        "Masalan: 4 xona"
+        "🛏 Xonalar sonini tanlang:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard,
+            resize_keyboard=True,
+            one_time_keyboard=True,
+        ),
     )
 
     return ROOMS
