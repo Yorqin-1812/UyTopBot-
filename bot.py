@@ -407,6 +407,118 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             media=photo_id,
                             caption=caption,
                         )
+# ==================================================
+# APPROVED ADS
+# ==================================================
+
+async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not update.message:
+        return
+
+    if ADMIN_ID is None or update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text(
+            "❌ Sizda admin huquqi yo‘q."
+        )
+        return
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            ad_type,
+            address,
+            house_type,
+            rooms,
+            price,
+            description,
+            phone,
+            photo_ids
+        FROM ads
+        WHERE status='approved'
+        ORDER BY id DESC
+    """)
+
+    ads = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    if not ads:
+        await update.message.reply_text(
+            "📋 Hozircha tasdiqlangan e'lonlar yo‘q."
+        )
+        return
+
+    await update.message.reply_text(
+        "📋 TASDIQLANGAN E'LONLAR\n\n"
+        f"Jami: {len(ads)} ta"
+    )
+
+    for ad in ads:
+
+        (
+            ad_id,
+            ad_type,
+            address,
+            house_type,
+            rooms,
+            price,
+            description,
+            phone,
+            photo_ids,
+        ) = ad
+
+        caption = (
+            f"🏠 E'lon #{ad_id}\n\n"
+            f"🏷 Turi: {ad_type}\n"
+            f"📍 Manzil: {address}\n"
+            f"🏠 Uy turi: {house_type}\n"
+            f"🛏 Xonalar: {rooms}\n"
+            f"💰 Narx: {price}\n"
+            f"📝 {description}\n"
+            f"📞 Telefon: {phone}"
+        )
+
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "🗑 O‘CHIRISH",
+                    callback_data=f"delete_confirm_{ad_id}"
+                )
+            ]
+        ]
+
+        photos = [
+            p for p in photo_ids.split(",")
+            if p
+        ]
+
+        # Bitta rasm
+        if len(photos) == 1:
+
+            await update.message.reply_photo(
+                photo=photos[0],
+                caption=caption,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+
+        # Bir nechta rasm
+        elif len(photos) > 1:
+
+            media = []
+
+            for i, photo_id in enumerate(photos):
+
+                if i == 0:
+
+                    media.append(
+                        InputMediaPhoto(
+                            media=photo_id,
+                            caption=caption,
+                        )
                     )
 
                 else:
@@ -421,10 +533,20 @@ async def approved_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 media=media
             )
 
+            # Albomga inline tugma qo‘yib bo‘lmagani uchun
+            # alohida xabarda o‘chirish tugmasi
             await update.message.reply_text(
                 f"🆔 E'lon #{ad_id} uchun admin amali:",
                 reply_markup=InlineKeyboardMarkup(keyboard),
             )
+
+        # Rasm bo‘lmasa
+        else:
+
+            await update.message.reply_text(
+                caption,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+    )
 
 # ==================================================
 # DELETE APPROVED AD
