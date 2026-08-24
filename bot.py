@@ -595,11 +595,11 @@ async def get_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data["address"] = update.message.text
 
-        keyboard = [
-        ["🏢 Kvartira", "🏡 Hovli"],
-        ["🏘 Kottej"],
-        ["❌ Bekor qilish"],
-        ]
+    keyboard = [
+    ["🏢 Kvartira", "🏡 Hovli"],
+    ["🏘 Kottej"],
+    ["❌ Bekor qilish"],
+    ]
 
     await update.message.reply_text(
         "🏠 Uy turini tanlang:",
