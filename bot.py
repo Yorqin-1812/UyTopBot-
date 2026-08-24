@@ -1436,6 +1436,136 @@ async def admin_action(
 
 
 # ==================================================
+# SHOW ONE AD
+# ==================================================
+
+async def send_ad_card(
+    chat_id,
+    ad,
+    context,
+    show_next=True
+):
+
+    (
+        ad_id,
+        address,
+        house_type,
+        rooms,
+        price,
+        description,
+        phone,
+        photo_ids,
+    ) = ad
+
+    photos = [p for p in photo_ids.split(",") if p]
+
+    caption = (
+        f"🏠 E'lon #{ad_id}\n\n"
+        f"📍 Manzil: {address}\n"
+        f"🏠 Uy turi: {house_type}\n"
+        f"🛏 Xonalar: {rooms}\n"
+        f"💰 Narx: {price}\n\n"
+        f"📝 {description}\n\n"
+        f"📞 Aloqa: {phone}"
+    )
+
+    # Keyingi tugmasi
+    keyboard = []
+
+    if show_next:
+        keyboard.append([
+            InlineKeyboardButton(
+                "➡️ KEYINGI E'LON",
+                callback_data=f"next_ad_{ad_id}"
+            )
+        ])
+
+    reply_markup = (
+        InlineKeyboardMarkup(keyboard)
+        if keyboard
+        else None
+    )
+
+    sent_message_ids = []
+
+    # ==================================================
+    # BITTA RASM
+    # ==================================================
+
+    if len(photos) == 1:
+
+        message = await context.bot.send_photo(
+            chat_id=chat_id,
+            photo=photos[0],
+            caption=caption,
+            reply_markup=reply_markup,
+        )
+
+        sent_message_ids.append(message.message_id)
+
+    # ==================================================
+    # KO‘P RASM
+    # ==================================================
+
+    elif len(photos) > 1:
+
+        media = []
+
+        for i, photo_id in enumerate(photos):
+
+            if i == 0:
+
+                media.append(
+                    InputMediaPhoto(
+                        media=photo_id,
+                        caption=caption,
+                    )
+                )
+
+            else:
+
+                media.append(
+                    InputMediaPhoto(
+                        media=photo_id
+                    )
+                )
+
+        messages = await context.bot.send_media_group(
+            chat_id=chat_id,
+            media=media,
+        )
+
+        for message in messages:
+            sent_message_ids.append(message.message_id)
+
+        # Albomga tugma qo‘yib bo‘lmagani uchun
+        # alohida xabar yuboramiz
+
+        if reply_markup:
+
+            button_message = await context.bot.send_message(
+                chat_id=chat_id,
+                text=f"🏠 E'lon #{ad_id}",
+                reply_markup=reply_markup,
+            )
+
+            sent_message_ids.append(button_message.message_id)
+
+    # Faqat rasm bo‘lmasa
+    else:
+
+        message = await context.bot.send_message(
+            chat_id=chat_id,
+            text=caption,
+            reply_markup=reply_markup,
+        )
+
+        sent_message_ids.append(message.message_id)
+
+    return sent_message_ids
+
+
+# ==================================================
 # SHOW ADS
 # ==================================================
 
@@ -1498,78 +1628,102 @@ async def show_ads(
 
         return
 
+    # E'lonlar ro‘yxatini saqlaymiz
+    context.user_data["ad_list"] = ads
+    context.user_data["ad_type"] = ad_type
+    context.user_data["ad_index"] = 0
+
     await update.message.reply_text(
         f"{title}\n\n"
-        f"Jami: {len(ads)} ta e'lon.",
-        reply_markup=main_keyboard(),
+        f"Jami: {len(ads)} ta e'lon."
     )
 
-    for ad in ads:
+    # Faqat BIRINCHI e'lonni chiqaramiz
+    message_ids = await send_ad_card(
+        chat_id=update.effective_chat.id,
+        ad=ads[0],
+        context=context,
+        show_next=len(ads) > 1,
+    )
 
-        (
-            ad_id,
-            address,
-            house_type,
-            rooms,
-            price,
-            description,
-            phone,
-            photo_ids,
-        ) = ad
+    context.user_data["current_ad_message_ids"] = message_ids
 
-        photos = [p for p in photo_ids.split(",") if p]
 
-        caption = (
-            f"🏠 E'lon #{ad_id}\n\n"
-            f"📍 Manzil: {address}\n"
-            f"🏠 {house_type}\n"
-            f"🛏 {rooms}\n"
-            f"💰 Narx: {price}\n\n"
-            f"📝 {description}\n\n"
-            f"📞 Aloqa: {phone}"
+# ==================================================
+# NEXT AD
+# ==================================================
+
+async def next_ad(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    if not query:
+        return
+
+    await query.answer()
+
+    ads = context.user_data.get("ad_list", [])
+
+    if not ads:
+        await query.answer(
+            "❌ E'lonlar ro‘yxati topilmadi. Qaytadan bo‘limni tanlang.",
+            show_alert=True,
+        )
+        return
+
+    current_index = context.user_data.get(
+        "ad_index",
+        0
+    )
+
+    next_index = current_index + 1
+
+    # Oxirgi e'lon
+    if next_index >= len(ads):
+
+        await query.answer(
+            "📌 Bu oxirgi e'lon.",
+            show_alert=True,
         )
 
-        # ==================================================
-        # BITTA RASM
-        # ==================================================
+        return
 
-        if len(photos) == 1:
+    # Eski e'lon rasmlari va tugmasini o‘chirish
+    old_message_ids = context.user_data.get(
+        "current_ad_message_ids",
+        []
+    )
 
-            await update.message.reply_photo(
-                photo=photos[0],
-                caption=caption,
+    for message_id in old_message_ids:
+
+        try:
+
+            await context.bot.delete_message(
+                chat_id=query.message.chat_id,
+                message_id=message_id,
             )
 
-        # ==================================================
-        # BIR NECHTA RASM
-        # ==================================================
+        except Exception:
+            pass
 
-        elif len(photos) > 1:
+    # Yangi indeks
+    context.user_data["ad_index"] = next_index
 
-            media = []
+    next_ad_data = ads[next_index]
 
-            for i, photo_id in enumerate(photos):
+    # Keyingi e'lonni yuborish
+    message_ids = await send_ad_card(
+        chat_id=query.message.chat_id,
+        ad=next_ad_data,
+        context=context,
+        show_next=next_index < len(ads) - 1,
+    )
 
-                if i == 0:
+    context.user_data["current_ad_message_ids"] = message_ids
 
-                    media.append(
-                        InputMediaPhoto(
-                            media=photo_id,
-                            caption=caption,
-                        )
-                    )
-
-                else:
-
-                    media.append(
-                        InputMediaPhoto(
-                            media=photo_id
-                        )
-                    )
-
-            await update.message.reply_media_group(
-                media=media
-        )
 # ==================================================
 # CANCEL
 # ==================================================
