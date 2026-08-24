@@ -1789,74 +1789,106 @@ async def show_ads(
     text = update.message.text
 
     if text == "🏠 Sotuvdagi uylar":
-
         ad_type = "Sotuv"
         title = "🏠 SOTUVDAGI UYLAR"
 
     elif text == "🔑 Ijara uchun uylar":
-
         ad_type = "Ijara"
         title = "🔑 IJARA UCHUN UYLAR"
 
     else:
         return
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+    # Qidiruv menyusi
+    keyboard = [
+        ["🔎 Qidirish"],
+        ["📋 Barcha e'lonlar"],
+        ["⬅️ Asosiy menyu"],
+    ]
 
-    cursor.execute(
-        """
-        SELECT
-            id,
-            address,
-            house_type,
-            rooms,
-            price,
-            description,
-            phone,
-            photo_ids
-        FROM ads
-        WHERE ad_type=?
-        AND status='approved'
-        ORDER BY id DESC
-        """,
-        (ad_type,),
-    )
-
-    ads = cursor.fetchall()
-
-    conn.close()
-
-    if not ads:
-
-        await update.message.reply_text(
-            f"{title}\n\n"
-            "Hozircha tasdiqlangan e'lonlar yo‘q.",
-            reply_markup=main_keyboard(),
-        )
-
-        return
-
-    # E'lonlar ro‘yxatini saqlaymiz
-    context.user_data["ad_list"] = ads
-    context.user_data["ad_type"] = ad_type
-    context.user_data["ad_index"] = 0
+    context.user_data["search_ad_type"] = ad_type
 
     await update.message.reply_text(
         f"{title}\n\n"
-        f"Jami: {len(ads)} ta e'lon."
+        "Kerakli bo‘limni tanlang:",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard,
+            resize_keyboard=True,
+        ),
+        )
+
+# ==================================================
+# SEARCH ADS
+# ==================================================
+
+async def search_ads(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    if not update.message:
+        return
+
+    ad_type = context.user_data.get("search_ad_type")
+
+    if not ad_type:
+        await update.message.reply_text(
+            "❌ Qidiruv bo‘limi topilmadi."
+        )
+        return
+
+    keyboard = [
+        ["💰 Narx bo‘yicha"],
+        ["🛏 Xona soni bo‘yicha"],
+        ["💰🛏 Narx + xona soni"],
+        ["📋 Barcha e'lonlar"],
+        ["⬅️ Asosiy menyu"],
+    ]
+
+    await update.message.reply_text(
+        "🔎 QIDIRUV\n\n"
+        "Qaysi mezon bo‘yicha qidirmoqchisiz?",
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard,
+            resize_keyboard=True,
+        ),
     )
 
-    # Faqat BIRINCHI e'lonni chiqaramiz
-    message_ids = await send_ad_card(
-        chat_id=update.effective_chat.id,
-        ad=ads[0],
-        context=context,
-        show_next=len(ads) > 1,
+# ==================================================
+# PRICE SEARCH
+# ==================================================
+
+async def price_search(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    if not update.message:
+        return
+
+    ad_type = context.user_data.get("search_ad_type")
+
+    if not ad_type:
+        await update.message.reply_text(
+            "❌ Qidiruv bo‘limi topilmadi."
+        )
+        return
+
+    await update.message.reply_text(
+        "💰 Narx bo‘yicha qidiruv\n\n"
+        "Eng yuqori narxni kiriting.\n\n"
+        "Masalan:\n"
+        "300000000\n\n"
+        "Ya'ni 300 million so‘mgacha bo‘lgan "
+        "uylarni qidirish uchun 300000000 deb yozing."
     )
 
-    context.user_data["current_ad_message_ids"] = message_ids
+    context.user_data["search_mode"] = "price"
+# ==================================================
+# NEXT AD
+# ==================================================
 
+async def next_ad(
 
 # ==================================================
 # NEXT AD
@@ -2302,6 +2334,30 @@ def main():
         )
     )
 
+    # ==================================================
+    # PRICE SEARCH
+    # ==================================================
+
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(
+                r"^💰 Narx bo‘yicha$"
+            ),
+            price_search,
+        )
+    )
+    # ==================================================
+    # SEARCH ADS
+    # ==================================================
+
+    application.add_handler(
+        MessageHandler(
+            filters.Regex(
+                r"^🔎 Qidirish$"
+            ),
+            search_ads,
+        )
+    )
     # ==================================================
     # ERROR
     # ==================================================
