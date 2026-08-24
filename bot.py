@@ -1,6 +1,6 @@
 import logging
 import os
-import sqlite3
+import psycopg2
 
 from telegram import (
     Update,
@@ -84,13 +84,21 @@ def get_admin_keyboard():
 # DATABASE
 # ==================================================
 
+def get_db_connection():
+    return psycopg2.connect(
+        os.getenv("DATABASE_URL")
+    )
+
+
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()   
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ads (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
+            id SERIAL PRIMARY KEY,
+            user_id BIGINT,
             username TEXT,
             ad_type TEXT,
             address TEXT,
@@ -109,17 +117,19 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS delete_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             ad_id INTEGER,
-            user_id INTEGER,
+            user_id BIGINT,
             username TEXT,
             status TEXT DEFAULT 'pending'
         )
     """)
+
     conn.commit()
+    cursor.close()
     conn.close()
 
-    logger.info("Database tayyor.")
+    logger.info("PostgreSQL database tayyor.")
 
 
 # ==================================================
