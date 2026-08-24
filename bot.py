@@ -1439,10 +1439,15 @@ async def admin_action(
 # SHOW ONE AD
 # ==================================================
 
+# ==================================================
+# SEND AD CARD
+# ==================================================
+
 async def send_ad_card(
     chat_id,
     ad,
     context,
+    show_previous=True,
     show_next=True
 ):
 
@@ -1469,20 +1474,36 @@ async def send_ad_card(
         f"📞 Aloqa: {phone}"
     )
 
-    # Keyingi tugmasi
-    keyboard = []
+    # ==================================================
+    # NAVIGATION BUTTONS
+    # ==================================================
+
+    buttons = []
+
+    navigation = []
+
+    if show_previous:
+        navigation.append(
+            InlineKeyboardButton(
+                "⬅️ OLDINGI",
+                callback_data=f"prev_ad_{ad_id}"
+            )
+        )
 
     if show_next:
-        keyboard.append([
+        navigation.append(
             InlineKeyboardButton(
-                "➡️ KEYINGI E'LON",
+                "➡️ KEYINGI",
                 callback_data=f"next_ad_{ad_id}"
             )
-        ])
+        )
+
+    if navigation:
+        buttons.append(navigation)
 
     reply_markup = (
-        InlineKeyboardMarkup(keyboard)
-        if keyboard
+        InlineKeyboardMarkup(buttons)
+        if buttons
         else None
     )
 
@@ -1539,7 +1560,7 @@ async def send_ad_card(
             sent_message_ids.append(message.message_id)
 
         # Albomga tugma qo‘yib bo‘lmagani uchun
-        # alohida xabar yuboramiz
+        # navigatsiya tugmasini alohida xabarda yuboramiz
 
         if reply_markup:
 
@@ -1551,7 +1572,10 @@ async def send_ad_card(
 
             sent_message_ids.append(button_message.message_id)
 
-    # Faqat rasm bo‘lmasa
+    # ==================================================
+    # RASM BO‘LMASA
+    # ==================================================
+
     else:
 
         message = await context.bot.send_message(
