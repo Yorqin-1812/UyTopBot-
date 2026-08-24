@@ -1693,7 +1693,7 @@ async def next_ad(
 
     if not ads:
         await query.answer(
-            "❌ E'lonlar ro‘yxati topilmadi. Qaytadan bo‘limni tanlang.",
+            "❌ E'lonlar ro‘yxati topilmadi.",
             show_alert=True,
         )
         return
@@ -1705,7 +1705,6 @@ async def next_ad(
 
     next_index = current_index + 1
 
-    # Oxirgi e'lon
     if next_index >= len(ads):
 
         await query.answer(
@@ -1715,7 +1714,7 @@ async def next_ad(
 
         return
 
-    # Eski e'lon rasmlari va tugmasini o‘chirish
+    # Eski e'lonni o‘chirish
     old_message_ids = context.user_data.get(
         "current_ad_message_ids",
         []
@@ -1733,21 +1732,92 @@ async def next_ad(
         except Exception:
             pass
 
-    # Yangi indeks
     context.user_data["ad_index"] = next_index
 
-    next_ad_data = ads[next_index]
+    ad = ads[next_index]
 
-    # Keyingi e'lonni yuborish
     message_ids = await send_ad_card(
         chat_id=query.message.chat_id,
-        ad=next_ad_data,
+        ad=ad,
         context=context,
+        show_previous=True,
         show_next=next_index < len(ads) - 1,
     )
 
     context.user_data["current_ad_message_ids"] = message_ids
 
+# ==================================================
+# PREVIOUS AD
+# ==================================================
+
+async def prev_ad(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    query = update.callback_query
+
+    if not query:
+        return
+
+    await query.answer()
+
+    ads = context.user_data.get("ad_list", [])
+
+    if not ads:
+        await query.answer(
+            "❌ E'lonlar ro‘yxati topilmadi.",
+            show_alert=True,
+        )
+        return
+
+    current_index = context.user_data.get(
+        "ad_index",
+        0
+    )
+
+    previous_index = current_index - 1
+
+    if previous_index < 0:
+
+        await query.answer(
+            "📌 Bu birinchi e'lon.",
+            show_alert=True,
+        )
+
+        return
+
+    # Eski e'lonni o‘chirish
+    old_message_ids = context.user_data.get(
+        "current_ad_message_ids",
+        []
+    )
+
+    for message_id in old_message_ids:
+
+        try:
+
+            await context.bot.delete_message(
+                chat_id=query.message.chat_id,
+                message_id=message_id,
+            )
+
+        except Exception:
+            pass
+
+    context.user_data["ad_index"] = previous_index
+
+    ad = ads[previous_index]
+
+    message_ids = await send_ad_card(
+        chat_id=query.message.chat_id,
+        ad=ad,
+        context=context,
+        show_previous=previous_index > 0,
+        show_next=previous_index < len(ads) - 1,
+    )
+
+    context.user_data["current_ad_message_ids"] = message_ids
 # ==================================================
 # CANCEL
 # ==================================================
