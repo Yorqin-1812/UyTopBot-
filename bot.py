@@ -227,8 +227,8 @@ async def admin_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor().
 
     cursor.execute(
         "SELECT COUNT(*) FROM ads WHERE status='approved'"
