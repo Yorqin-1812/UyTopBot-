@@ -228,7 +228,7 @@ async def admin_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     conn = get_db_connection()
-    cursor = conn.cursor().
+    cursor = conn.cursor()
 
     cursor.execute(
         "SELECT COUNT(*) FROM ads WHERE status='approved'"
@@ -254,7 +254,6 @@ async def admin_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⏳ Kutilayotgan: {pending_ads} ta"
     )
 
-
 # ==================================================
 # PENDING ADS
 # ==================================================
@@ -270,17 +269,19 @@ async def pending_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         SELECT id, ad_type, address, price, payment_status
         FROM ads
-        WHERE status='pending'
+        WHERE status = 'pending'
         ORDER BY id DESC
     """)
 
     ads = cursor.fetchall()
+
+    cursor.close()
     conn.close()
 
     if not ads:
@@ -292,6 +293,7 @@ async def pending_ads(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = "📋 KUTILAYOTGAN E'LONLAR\n\n"
 
     for ad in ads:
+
         ad_id, ad_type, address, price, payment_status = ad
 
         text += (
