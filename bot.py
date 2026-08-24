@@ -1789,12 +1789,6 @@ async def price_search(
 # ==================================================
 
 async def next_ad(
-
-# ==================================================
-# NEXT AD
-# ==================================================
-
-async def next_ad(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
